@@ -108,7 +108,7 @@ final class BambuMapper
         }
     }
 
-    public static function map(array $p, array $ver = [], bool $hmsText = true): array
+    public static function map(array $p, array $ver = [], bool $hmsText = true, ?BambuHmsTexte $texte = null): array
     {
         $o = [];
         $set = function (string $t, ?string $v) use (&$o): void {
@@ -232,6 +232,22 @@ final class BambuMapper
             if ($hmsText) {
                 $set('fehler/hms_text', $codes ? implode(',', $codes) : 'keine');
             }
+            if ($texte !== null) {
+                // Klartext aus der Bambu-Textliste; fuer Meldungen ohne Text bleibt der Code stehen (nicht jeder Code hat einen Text)
+                $klar = [];
+                foreach ($p['hms'] as $h) {
+                    $code = is_array($h) ? self::hmsText($h) : null;
+                    if ($code !== null) {
+                        $klar[] = $texte->hmsText($h) ?? $code;
+                    }
+                }
+                $set('fehler/hms_klartext', $klar ? BambuHmsTexte::kuerzen(implode(' | ', $klar)) : 'keine');
+                $set('fehler/hms_code', $codes ? $codes[0] : 'keine');
+            }
+        }
+        if ($texte !== null && $ec !== null && is_numeric($ec)) {
+            $n = (int)$ec;
+            $set('fehler/text', $n === 0 ? 'keine' : BambuHmsTexte::kuerzen($texte->fehlerText($n) ?? BambuHmsTexte::ecodeFehler($n)));
         }
 
         // --- AMS

@@ -13,7 +13,7 @@ date_default_timezone_set('Europe/Berlin');
 foreach (['Util', 'Logger', 'MqttClient', 'GatewayInfo'] as $c) {
     require_once $root . '/../common/php/' . $c . '.php';
 }
-foreach (['BambuConfig', 'BambuState', 'BambuMapper', 'BambuCommands', 'BambuPrinter', 'AppVersion'] as $c) {
+foreach (['BambuConfig', 'BambuState', 'BambuHmsTexte', 'BambuMapper', 'BambuCommands', 'BambuPrinter', 'AppVersion'] as $c) {
     require_once $root . '/bambulab2lox/bin/lib/' . $c . '.php';
 }
 
@@ -319,6 +319,100 @@ $pr1 = new BambuPrinter(['name' => 'y', 'host' => '127.0.0.1', 'port' => 1, 'ser
 check('Drucker mit gesperrten Befehlen: gesperrt vor Verbindung', str_starts_with($pr1->befehl('licht_kammer', '1', microtime(true)), 'abgelehnt: Befehle sind gesperrt'), true);
 check('Drucker: Status vor dem ersten Verbindungsversuch ist in Ordnung', [$pr1->status(time())['ok'], $pr1->status(time())['aus']], [true, false]);
 
+// ---------------------------------------------------------------- Unit: HMS-Klartext (Zuordnung, Auswertung, Mapper, Konfiguration)
+const HMS_TEXT_A = 'Testtext: Gewindestangen schmieren (Prüfung: ÄÖÜ ß, 日本語)';
+check('HMS-Code aus attr und code (16 Hex-Zeichen, gross)', BambuHmsTexte::ecodeHms(83952640, 196610), '0501040000030002');
+check('HMS-Code: kleine Werte mit fuehrenden Nullen', BambuHmsTexte::ecodeHms(0, 1), '0000000000000001');
+check('Fehlercode des Druckers als 8 Hex-Zeichen', BambuHmsTexte::ecodeFehler(83902530), '05004042');
+check('Modellcode: erste drei Zeichen der Seriennummer, gross', [BambuHmsTexte::modellCode('31b8bp00000'), BambuHmsTexte::modellCode('ab'), BambuHmsTexte::modellCode('')], ['31B', '', '']);
+check('Sprache: de oder en, sonst de', [BambuHmsTexte::cleanSprache('en'), BambuHmsTexte::cleanSprache('fr'), BambuHmsTexte::cleanSprache(null)], ['en', 'de', 'de']);
+$hmsJson = fn(string $lang = 'de') => json_encode(['result' => 0, 'data' => [
+    'device_hms' => ['ver' => 1, $lang => [['ecode' => '0501040000030002', 'intro' => HMS_TEXT_A], ['ecode' => '050002000003000a', 'intro' => "Testtext: zweite Meldung\x01"], ['ecode' => 'KEINHEX', 'intro' => 'x'], ['ecode' => '0500060000020009', 'intro' => '  ']]],
+    'device_error' => ['ver' => 1, $lang => [['ecode' => '05004042', 'intro' => 'Testtext: Fehler des Druckers']]]]], JSON_UNESCAPED_UNICODE);
+$pl = BambuHmsTexte::parse($hmsJson(), 'de');
+check('Textliste: gueltige Eintraege, Code gross, Steuerzeichen weg, ungueltige und leere verworfen', [array_keys($pl['hms']), $pl['hms']['050002000003000A'], $pl['fehler']], [['0501040000030002', '050002000003000A'], 'Testtext: zweite Meldung', ['05004042' => 'Testtext: Fehler des Druckers']]);
+check('Textliste: andere Sprache nicht vorhanden = unbrauchbar', BambuHmsTexte::parse($hmsJson('de'), 'en'), null);
+check('Textliste: kaputtes JSON und fremdes Format = unbrauchbar', [BambuHmsTexte::parse('{"result":0,"data":{', 'de'), BambuHmsTexte::parse('[]', 'de'), BambuHmsTexte::parse('{"data":{"device_hms":{"de":[]}}}', 'de')], [null, null, null]);
+check('Textliste: ungueltiges UTF-8 im Text wird verworfen', BambuHmsTexte::parse(json_encode(['data' => ['device_hms' => ['de' => [['ecode' => '0501040000030002', 'intro' => "ok"]]]]]), 'de') !== null
+    && BambuHmsTexte::parse('{"data":{"device_hms":{"de":[{"ecode":"0501040000030002","intro":"' . "\xff\xfe" . '"}]}}}', 'de') === null, true);
+check('Kuerzen: kurzer Text bleibt', BambuHmsTexte::kuerzen('abc', 10), 'abc');
+$lang = BambuHmsTexte::kuerzen(str_repeat('ä', 800), 1000);
+check('Kuerzen: hoechstens 1000 Bytes, gueltiges UTF-8, mit Auslassungszeichen', [strlen($lang) <= 1000, (bool)preg_match('//u', $lang), str_ends_with($lang, '…')], [true, true, true]);
+check('Kuerzen: nie mitten im Zeichen (Dreibyte-Zeichen)', (bool)preg_match('//u', BambuHmsTexte::kuerzen(str_repeat('日', 500), 1000)), true);
+// Zwischenspeicher, Abstaende, Ausfall (mit Ersatz-Abruf, ohne Netz)
+$hd = $dir . '/hmsdata';
+@mkdir($hd, 0777, true);
+$calls = 0;
+$modus = 'ok';
+$fetchX = function (string $u) use (&$calls, &$modus, $hmsJson) {
+    $calls++;
+    return $modus === 'ok' ? $hmsJson('de') : null;
+};
+$t0 = 2000000000;
+$x = new BambuHmsTexte($hd, 'TESTSERIAL001', 'de', 'http://x.invalid/query.php', $fetchX);
+check('Textliste: Datei und Adresse mit Modellcode und Sprache', [basename($x->datei()), $x->url(), $x->schluessel()], ['hms_TES_de.json', 'http://x.invalid/query.php?lang=de&d=TES', 'TES_de']);
+check('Erster Start: Liste wird geladen', [$x->aktualisieren($t0), $calls], [true, 1]);
+check('Text zu HMS-Code und Fehlercode, unbekannte Codes null', [$x->hmsText(['attr' => 83952640, 'code' => 196610]), $x->hmsText(['attr' => 1, 'code' => 2]), $x->fehlerText(83902530), $x->fehlerText(5), $x->hmsText(['attr' => 'x'])],
+    [HMS_TEXT_A, null, 'Testtext: Fehler des Druckers', null, null]);
+check('Zwischenspeicher liegt im Datenordner', is_file($hd . '/hms_TES_de.json'), true);
+check('Innerhalb einer Woche kein neuer Abruf', [$x->aktualisieren($t0 + BambuHmsTexte::WOCHE - 1), $calls], [false, 1]);
+check('Nach einer Woche neuer Abruf', [$x->aktualisieren($t0 + BambuHmsTexte::WOCHE), $calls], [true, 2]);
+$neu = new BambuHmsTexte($hd, 'TESTSERIAL001', 'de', 'http://x.invalid/query.php', $fetchX);
+check('Neustart: Zwischenspeicher wird ohne Abruf gelesen', [$neu->aktualisieren($t0 + BambuHmsTexte::WOCHE + 100), $calls, $neu->hmsText(['attr' => 83952640, 'code' => 196610])], [false, 2, HMS_TEXT_A]);
+// Serverausfall am Wochenende: Texte aus dem Zwischenspeicher bleiben, Wiederholung fruehestens nach einer Stunde, dann doppelt so lang
+$modus = 'aus';
+$tw = $t0 + 2 * BambuHmsTexte::WOCHE;
+check('Ausfall: Abruf scheitert, Texte bleiben', [$neu->aktualisieren($tw), $calls, $neu->hmsText(['attr' => 83952640, 'code' => 196610]), $neu->info()['fehlschlaege']], [false, 3, HMS_TEXT_A, 1]);
+check('Ausfall: nach 59 Minuten kein neuer Versuch', [$neu->aktualisieren($tw + 3540), $calls], [false, 3]);
+check('Ausfall: nach einer Stunde neuer Versuch', [$neu->aktualisieren($tw + 3600), $calls, $neu->info()['fehlschlaege']], [false, 4, 2]);
+check('Ausfall: danach erst nach zwei Stunden', [$neu->aktualisieren($tw + 3600 + 7199), $calls, $neu->aktualisieren($tw + 3600 + 7200), $calls], [false, 4, false, 5]);
+$modus = 'ok';
+check('Server wieder da: Liste wird geladen, Fehlerzaehler zurueck', [$neu->aktualisieren($tw + 3600 + 7200 + 14400), $neu->info()['fehlschlaege'], $neu->info()['letzter_fehler']], [true, 0, '']);
+check('Fehlerabstand wird nie laenger als ein Tag', (function () use ($hd, $hmsJson) {
+    $n = 0;
+    $y = new BambuHmsTexte($hd . '/leer', 'TESTSERIAL001', 'de', 'http://x.invalid/q', function ($u) use (&$n) { $n++; return null; });
+    $t = 3000000000;
+    $y->aktualisieren($t);
+    for ($i = 0; $i < 14; $i++) {
+        $t += 86400;
+        $y->aktualisieren($t);
+    }
+    return $n >= 14 && $n <= 16;
+})(), true);
+$en = new BambuHmsTexte($hd, 'TESTSERIAL001', 'en', 'http://x.invalid/query.php', fn($u) => $hmsJson('en'));
+check('Englisch: eigene Datei und eigene Liste', [basename($en->datei()), $en->aktualisieren($t0), $en->hmsText(['attr' => 83952640, 'code' => 196610])], ['hms_TES_en.json', true, HMS_TEXT_A]);
+$ohne = new BambuHmsTexte($hd, 'AB', 'de', 'http://x.invalid/query.php', fn($u) => null);
+check('Seriennummer zu kurz: Abfrage ohne Modellcode, Schluessel "alle"', [$ohne->url(), $ohne->schluessel()], ['http://x.invalid/query.php?lang=de', 'alle_de']);
+// Mapper mit und ohne Klartext
+$tx = new BambuHmsTexte($hd . '/mapper', 'TESTSERIAL001', 'de', 'http://x.invalid/query.php', fn($u) => $hmsJson('de'));
+@mkdir($hd . '/mapper', 0777, true);
+$tx->aktualisieren($t0);
+$mk = BambuMapper::map($pD, [], true, $tx);
+check('Mapper mit Klartext: Text, wo es einen gibt, sonst der Code, mit " | " getrennt', $mk['fehler/hms_klartext'],
+    'HMS_0500_0600_0002_0006 | ' . HMS_TEXT_A . ' | HMS_0501_0400_0003_0004 | Testtext: zweite Meldung | HMS_0500_0600_0002_0005');
+check('Mapper mit Klartext: Code der ersten Meldung, bestehende Topics unveraendert', [$mk['fehler/hms_code'], $mk['fehler/hms_anzahl'], str_contains($mk['fehler/hms_text'], 'HMS_0501_0400_0003_0002,')], ['HMS_0500_0600_0002_0006', '5', true]);
+check('Mapper mit Klartext: kein Fehlercode = "keine"', $mk['fehler/text'], 'keine');
+check('Mapper mit Klartext: Text zum Fehlercode, unbekannter Fehlercode als Code', [BambuMapper::map(['print_error' => 83902530], [], true, $tx)['fehler/text'], BambuMapper::map(['print_error' => 12345678], [], true, $tx)['fehler/text']], ['Testtext: Fehler des Druckers', '00BC614E']);
+$ohneKlar = BambuMapper::map($pD, [], true);
+check('Mapper ohne Option: keine Klartext-Topics, hms_text wie bisher', [isset($ohneKlar['fehler/hms_klartext']), isset($ohneKlar['fehler/hms_code']), isset($ohneKlar['fehler/text']), isset($ohneKlar['fehler/hms_text'])], [false, false, false, true]);
+check('Mapper: keine HMS-Meldungen = "keine"', [BambuMapper::map(['hms' => []], [], true, $tx)['fehler/hms_klartext'], BambuMapper::map(['hms' => []], [], true, $tx)['fehler/hms_code']], ['keine', 'keine']);
+$viele = ['hms' => array_fill(0, 40, ['attr' => 83952640, 'code' => 196610])];
+$mv = BambuMapper::map($viele, [], true, $tx)['fehler/hms_klartext'];
+check('Mapper: sehr lange Klartexte werden auf 1000 Bytes gekuerzt (UTF-8 bleibt gueltig)', [strlen($mv) <= 1000, (bool)preg_match('//u', $mv), str_ends_with($mv, '…')], [true, true, true]);
+// Konfiguration
+$cfgK = BambuConfig::defaults();
+check('Vorgabe: HMS-Klartext aus, Sprache de', [$cfgK['hms_klartext'], $cfgK['hms_sprache']], [false, 'de']);
+$kf = $dir . '/klartext.json';
+file_put_contents($kf, json_encode(['hms_klartext' => 1, 'hms_sprache' => 'fr']));
+$kl = BambuConfig::load($kf);
+check('Laden: Klartext als Bool, unbekannte Sprache = de', [$kl['hms_klartext'], $kl['hms_sprache']], [true, 'de']);
+check('Laden: alte Konfiguration ohne die neuen Schluessel = aus, de', [BambuConfig::load($dir . '/gibtsnicht.json')['hms_klartext'], BambuConfig::load($dir . '/gibtsnicht.json')['hms_sprache']], [false, 'de']);
+$fp1 = BambuConfig::fromPost($cfgK, ['pushall_abstand' => '300', 'hms_klartext' => '1', 'hms_sprache' => 'en']);
+check('fromPost: Klartext an, Sprache en', [$fp1['hms_klartext'], $fp1['hms_sprache']], [true, 'en']);
+$fp2 = BambuConfig::fromPost($fp1, ['pushall_abstand' => '300', 'hms_sprache' => 'xx']);
+check('fromPost: Haken weg = aus, ungueltige Sprache = de', [$fp2['hms_klartext'], $fp2['hms_sprache']], [false, 'de']);
+check('fromPost: anderer Reiter laesst die Klartext-Einstellung unveraendert', BambuConfig::fromPost($fp1, ['mqtt' => ['eigener_broker' => '']])['hms_klartext'], true);
+
 // ---------------------------------------------------------------- Prozesse (TLS-Fake-Drucker und Fake-Broker)
 $php = PHP_BINARY;
 $phpOpt = [];
@@ -343,6 +437,32 @@ $bblog = fn(int $port) => (string)@file_get_contents("$dir/bbl_$port.log");
 $mlog = fn() => (string)@file_get_contents($dir . '/mqtt.log');
 $has = fn(string $topic, string $val) => (bool)preg_match('/' . preg_quote($topic, '/') . "\t" . preg_quote($val, '/') . '(\r?\n|$)/', $mlog());
 $inject = fn(string $zeilen) => file_put_contents($dir . '/inject.txt', $zeilen);
+$hmsPort = 18844;
+$hmsCtl = fn(string $modus) => file_put_contents("$dir/hms_ctl.json", json_encode(['modus' => $modus]));
+$hmsLog = fn() => (string)@file_get_contents("$dir/hms.log");
+$hmsProc = startProc([$php, __DIR__ . '/fake_hms.php', (string)$hmsPort, $dir]);
+waitFor(fn() => @stream_socket_client("tcp://127.0.0.1:$hmsPort", $e, $es, 1) !== false, 8);
+$hmsUrl = "http://127.0.0.1:$hmsPort/query.php";
+// Abruf ueber echtes HTTP (Streams): Antwort, Fehlerstatus, kaputtes JSON, zu grosse Antwort, leere Liste
+@unlink("$dir/hms.log");
+$hmsCtl('ok');
+$hh = $dir . '/hmshttp';
+@mkdir($hh, 0777, true);
+$ht = new BambuHmsTexte($hh, 'TESTSERIAL001', 'de', $hmsUrl);
+check('HTTP: Liste wird geladen, ein Abruf mit Sprache und Modellcode, sonst nichts gesendet', [$ht->aktualisieren(1000), $hmsLog()], [true, "GET /query.php?lang=de&d=TES\n"]);
+check('HTTP: Texte und Fehlertexte da (UTF-8), ungueltige Eintraege verworfen', [$ht->hmsText(['attr' => 83952640, 'code' => 196610]), $ht->info()['hms'], $ht->info()['fehler']], [HMS_TEXT_A, 2, 1]);
+check('HTTP: kein Zugangscode und keine Seriennummer in der Abfrage', [str_contains($hmsLog(), 'testcode'), str_contains($hmsLog(), 'TESTSERIAL')], [false, false]);
+foreach (['503' => 'Fehlerstatus 503', 'kaputt' => 'kaputtes JSON', 'gross' => 'Antwort ueber 5 MB', 'leer' => 'leere Liste'] as $m => $name) {
+    $hmsCtl($m);
+    $hy = new BambuHmsTexte($hh . "/$m", 'TESTSERIAL001', 'de', $hmsUrl);
+    @mkdir($hh . "/$m", 0777, true);
+    check("HTTP: $name = kein Absturz, keine Texte, Fehler gemerkt", [$hy->aktualisieren(1000), $hy->hmsText(['attr' => 83952640, 'code' => 196610]), $hy->info()['fehlschlaege'], is_file($hy->datei())], [false, null, 1, false]);
+}
+$hmsCtl('ok');
+$hmsOhne = new BambuHmsTexte($hh . '/offen', 'TESTSERIAL001', 'de', 'http://127.0.0.1:1/query.php');
+@mkdir($hh . '/offen', 0777, true);
+check('HTTP: Server nicht erreichbar = kein Absturz', [$hmsOhne->aktualisieren(1000), $hmsOhne->info()['letzter_fehler']], [false, 'Abruf nicht möglich']);
+@unlink("$dir/hms.log");
 if (!$bblSkip) {
     $ctl($pA, ['modell' => 'h2c', 'dev' => false, 'code' => 'testcode', 'state' => 'druckt']);
     $ctl($pB, ['modell' => 'p1', 'dev' => true, 'code' => 'testcode', 'state' => 'druckt']);
@@ -363,7 +483,7 @@ if (!$bblSkip) {
     Util::jsonSave($e2e . '/bambulab.json', $conf);
     @unlink($dir . '/mqtt.log');
     $svc = startProc(array_merge([$php], $phpOpt, [dirname(__DIR__) . '/bambulab2lox/bin/bambulabd.php']),
-        ['BBL_DEV_DIR' => $e2e, 'BBL_DEV_MQTT' => "127.0.0.1:$mqPort", 'BBL_DEV_LOGLEVEL' => 'debug']);
+        ['BBL_DEV_DIR' => $e2e, 'BBL_DEV_MQTT' => "127.0.0.1:$mqPort", 'BBL_DEV_LOGLEVEL' => 'debug', 'BBL_DEV_HMS_URL' => $hmsUrl]);
     $bl = fn() => (string)@file_get_contents($e2e . '/bambulab.log');
     $stat = fn() => Util::jsonLoad($e2e . '/run/status.json');
 
@@ -503,6 +623,34 @@ if (!$bblSkip) {
     check('Falschen Drucker entfernt: status/ok wieder 1 (der ausgeschaltete Drucker ist kein Fehler)', waitFor(fn() => $has('bambulab/status/ok', '1'), 20), true);
     check('Access Code der anderen Drucker auch jetzt nirgends im Log', [str_contains($bl(), 'egal1234'), str_contains($bl(), 'testcode')], [false, false]);
 
+    // ---------------------------------------------------------------- HMS-Klartext (Option, Textliste vom Fake-Server)
+    check('HMS-Klartext aus (Standard): kein Abruf, keine Klartext-Topics', [$hmsLog(), str_contains($mlog(), 'fehler/hms_klartext'), str_contains($mlog(), 'fehler/hms_code')], ['', false, false]);
+    $confK = BambuConfig::load($e2e . '/bambulab.json');
+    $confK['hms_klartext'] = true;
+    $confK['hms_sprache'] = 'de';
+    @unlink($dir . '/mqtt.log');
+    Util::jsonSave($e2e . '/bambulab.json', $confK);
+    check('HMS-Klartext an: genau ein Abruf fuer beide Drucker (gleicher Modellcode TES)', waitFor(fn() => str_contains($hmsLog(), 'GET /query.php?lang=de&d=TES'), 15) && substr_count($hmsLog(), 'GET ') === 1, true);
+    $klarErwartet = 'HMS_0500_0600_0002_0006 | ' . HMS_TEXT_A . ' | HMS_0501_0400_0003_0004 | Testtext: zweite Meldung | HMS_0500_0600_0002_0005';
+    check('HMS-Klartext: fehler/hms_klartext des H2C (Text oder Code)', waitFor(fn() => $has('bambulab/h2c/fehler/hms_klartext', $klarErwartet), 12), true);
+    check('HMS-Klartext: fehler/hms_code und fehler/text; das bestehende hms_text (Codes) wird nicht veraendert gesendet', [$has('bambulab/h2c/fehler/hms_code', 'HMS_0500_0600_0002_0006'), $has('bambulab/h2c/fehler/text', 'keine'), !str_contains($mlog(), "bambulab/h2c/fehler/hms_text\t" . HMS_TEXT_A)], [true, true, true]);
+    check('HMS-Klartext: auch der P1 bekommt die Texte', waitFor(fn() => str_contains($mlog(), 'bambulab/p1/fehler/hms_klartext'), 12), true);
+    check('HMS-Klartext: Zwischenspeicher im Datenordner, Zustand in status.json', [is_file($e2e . '/data/hms_TES_de.json'), $stat()['hms_texte']['TES_de']['hms'] ?? null, $stat()['hms_texte']['TES_de']['fehler'] ?? null], [true, 2, 1]);
+    check('HMS-Klartext: kein Zugangscode, keine Seriennummer in der Abfrage, kein Zugangscode im Zwischenspeicher', [str_contains($hmsLog(), 'testcode'), str_contains($hmsLog(), 'TESTSERIAL'), str_contains((string)file_get_contents($e2e . '/data/hms_TES_de.json'), 'testcode')], [false, false, false]);
+    $ctl($pA, ['modell' => 'h2c', 'dev' => true, 'code' => 'testcode', 'state' => 'fehler']);
+    check('HMS-Klartext: Fehlercode des Druckers als Text, Zustand Fehler', waitFor(fn() => $has('bambulab/h2c/fehler/text', 'Testtext: Fehler des Druckers') && $has('bambulab/h2c/status_text', 'Fehler'), 12), true);
+    $confK['hms_sprache'] = 'en';
+    @unlink($dir . '/mqtt.log');
+    Util::jsonSave($e2e . '/bambulab.json', $confK);
+    check('HMS-Klartext: Sprache en = neuer Abruf und englische Texte', waitFor(fn() => str_contains($hmsLog(), 'GET /query.php?lang=en&d=TES') && $has('bambulab/h2c/fehler/text', 'Test text: printer error'), 15), true);
+    $abrufe = substr_count($hmsLog(), 'GET ');
+    $confK['hms_klartext'] = false;
+    Util::jsonSave($e2e . '/bambulab.json', $confK);
+    sleep(3);
+    check('HMS-Klartext wieder aus: kein weiterer Abruf', substr_count($hmsLog(), 'GET '), $abrufe);
+    $ctl($pA, ['modell' => 'h2c', 'dev' => true, 'code' => 'testcode', 'state' => 'druckt', 'reset' => 7]);
+    waitFor(fn() => $has('bambulab/h2c/zustand/druckt', '1'), 10);
+
     // ---------------------------------------------------------------- Verbindungsverlust waehrend des Drucks = Fehler, danach Wiederverbinden
     $ctl($pB, ['modell' => 'p1', 'dev' => true, 'code' => 'testcode', 'state' => 'druckt', 'reset' => 1]);      // der Druck wurde oben abgebrochen: neuer Druck
     @unlink($dir . '/mqtt.log');
@@ -532,6 +680,7 @@ if (!$bblSkip) {
 } else {
     echo "Hinweis: TLS-Ende-zu-Ende-Tests uebersprungen\n";
 }
+stopProc($hmsProc);
 
 // ---------------------------------------------------------------- Healthcheck (LoxBerry-Healthcheck-Seite)
 $hcDir = $dir . '/hc';
@@ -637,8 +786,11 @@ check('UI Drucker: Hinweise zu LAN-Modus, Entwicklermodus und Zertifikat', [str_
 check('UI Drucker: Hinweis, dass ohne Entwicklermodus nur das Licht schaltbar ist; Auslesen ohne LAN-/Entwicklermodus', [str_contains($o, 'nur das Licht'), str_contains($o, 'ohne LAN-Modus und ohne Entwicklermodus')], [true, true]);
 $uiCode = (string)file_get_contents($root . '/bambulab2lox/webfrontend/htmlauth/index.php');
 check('UI Drucker: Klartext statt Rohwert im Statusfeld, Hinweis bei abgelehnten Druckbefehlen im Code', [str_contains($uiCode, 'zustand_text'), str_contains($uiCode, 'dev_modus_fehlt')], [true, true]);
+check('UI Drucker: Option HMS-Klartext mit Spracheauswahl und Erklaerung (Internet, oeffentliche Liste, kein Konto, woechentlich)', [str_contains($o, 'name="hms_klartext"'), str_contains($o, 'name="hms_sprache"'), str_contains($o, 'e.bambulab.com'), str_contains($o, 'ohne Konto'), str_contains($o, 'einmal je Woche'), str_contains($o, 'Internet')], [true, true, true, true, true, true]);
+check('UI Drucker: HMS-Klartext ab Werk nicht angehakt', str_contains($o, 'name="hms_klartext" value="1" checked'), false);
 check('UI Drucker: acht Zeilen', substr_count($o, '][aktiv]"'), 8);
 [$o] = $uiPage('loxone', ['STUB_UDP' => '12345']);
+check('UI Loxone: Topic-Tabelle nennt die Klartext-Topics der Option', [str_contains($o, 'fehler/hms_klartext'), str_contains($o, 'nicht jeder Code hat einen Text'), str_contains($o, 'Texteingang')], [true, true, true]);
 check('UI Loxone: Befehlstabelle mit UDP-Port, Topics und Quittung', [str_contains($o, '/dev/udp/&lt;LoxBerry-IP&gt;/12345'), str_contains($o, 'bambulab/befehl/werkstatt/stopp'), str_contains($o, 'bambulab/befehl/werkstatt/licht_kammer2'),
     str_contains($o, 'quittung'), str_contains($o, 'bambulab_werkstatt_verbunden')], [true, true, true, true, true]);
 check('UI Loxone: kein rohes G-Code als Befehl', str_contains($o, 'gcode'), false);

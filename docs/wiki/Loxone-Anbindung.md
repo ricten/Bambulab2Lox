@@ -21,6 +21,8 @@ Das Gateway ersetzt `/` durch `_`. Aus `bambulab/drucker1/fortschritt_prozent` w
 | `bambulab_drucker1_fortschritt_prozent` | Fortschritt (%) |
 | `bambulab_drucker1_restzeit_min` | Restzeit (min) |
 | `bambulab_drucker1_duese_c`, `…_bett_c`, `…_kammer_c` | Temperaturen |
+| `bambulab_drucker1_fehler_hms_anzahl` | Zahl der HMS-Meldungen (für Schaltlogik) |
+| `bambulab_drucker1_fehler_hms_klartext`, `…_fehler_text` | Texte (nur mit der Option HMS-Klartext), als **virtueller Texteingang** anlegen |
 | `bambulab_status_ok` | 1 = alle Drucker in Ordnung |
 | `bambulab_status_zaehler` | Lebenszeichen 0…999 |
 
@@ -28,6 +30,7 @@ Hinweise:
 
 - **Ausfallerkennung:** `bambulab_status_zaehler` ändert sich alle 10 s. Bleibt er stehen, läuft der Dienst nicht mehr.
 - **Drucker aus:** Ein ausgeschalteter Drucker ist kein Fehler: `verbunden` = 0, `status/ok` bleibt 1. Verlässt der Drucker das Netz **während eines Drucks**, wird `status/ok` 0. Für „Druck fertig“ eignet sich `zustand/fertig`, für „Druck abgebrochen“ `zustand/abgebrochen`.
+- **HMS-Texte in Loxone:** Mit der Option *HMS-Klartext* kommen `fehler/hms_klartext` und `fehler/text` als Text. In Loxone Config dafür einen **virtuellen Texteingang** anlegen (kein Zahleneingang). Ein Miniserver kann lange Texte kürzen oder nur begrenzt anzeigen; das Plugin kürzt selbst auf 1000 Zeichen, bei mehreren Meldungen kann der Text trotzdem länger sein als der Eingang zeigt. Für Schaltlogik (Alarm, Meldung) besser `fehler_hms_anzahl` oder `fehler_code` auswerten und den Text nur anzeigen. Nicht jeder Code hat einen Text; dann steht der Code da.
 - Es werden nur Änderungen gesendet (alle 5 Minuten alle Werte). Eingänge ohne Änderung behalten ihren Wert.
 - Keine Leerzeichen in Druckernamen verwenden, sonst findet das Gateway die Eingänge nicht.
 

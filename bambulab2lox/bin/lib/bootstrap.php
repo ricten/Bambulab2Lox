@@ -6,7 +6,7 @@
  */
 date_default_timezone_set('Europe/Berlin');     // PHP auf dem LoxBerry laeuft auf UTC
 
-foreach (['Util', 'Logger', 'MqttClient', 'GatewayInfo', 'BambuConfig', 'BambuState', 'BambuMapper', 'BambuCommands', 'BambuPrinter', 'AppVersion'] as $cls) {
+foreach (['Util', 'Logger', 'MqttClient', 'GatewayInfo', 'BambuConfig', 'BambuState', 'BambuHmsTexte', 'BambuMapper', 'BambuCommands', 'BambuPrinter', 'AppVersion'] as $cls) {
     // im ZIP liegt alles in bin/lib; im Quellbaum kommen die gemeinsamen Klassen aus ../common/php
     $f = __DIR__ . '/' . $cls . '.php';
     require_once is_file($f) ? $f : __DIR__ . '/../../../../common/php/' . $cls . '.php';
@@ -17,6 +17,7 @@ final class Paths
     public string $folder;
     public string $config;     // bambulab.json
     public string $logfile;
+    public string $data;       // Datenordner (Zwischenspeicher der HMS-Texte)
     public string $run;        // /dev/shm/<folder>
     public string $bin;
 
@@ -28,6 +29,7 @@ final class Paths
             $p->folder = getenv('BBL_DEV_FOLDER') ?: 'bambulab2lox';
             $p->config = $dev . '/bambulab.json';
             $p->logfile = $dev . '/bambulab.log';
+            $p->data = $dev . '/data';
             $p->run = getenv('BBL_DEV_RUN') ?: $dev . '/run';
             $p->bin = dirname(__DIR__);
         } else {
@@ -35,11 +37,15 @@ final class Paths
             $p->folder = LBPPLUGINDIR;
             $p->config = LBPCONFIGDIR . '/bambulab.json';
             $p->logfile = LBPLOGDIR . '/bambulab.log';
+            $p->data = LBPDATADIR;
             $p->run = '/dev/shm/' . LBPPLUGINDIR;
             $p->bin = LBPBINDIR;
         }
         if (!is_dir($p->run)) {
             @mkdir($p->run, 0775, true);
+        }
+        if (!is_dir($p->data)) {
+            @mkdir($p->data, 0775, true);
         }
         return $p;
     }

@@ -101,6 +101,12 @@ LBWeb::lbheader('Bambulab2Lox ' . AppVersion::CURRENT, '', '', true);
 <div class="lb-form-field"><input class="lb-input bbl-schmal" type="number" id="pushall_abstand" name="pushall_abstand" min="60" max="3600" value="<?= (int)$bbl['pushall_abstand'] ?>"></div></div>
 <p class="hinweis">Nur für Modelle, die ihren Zustand in Teilen melden (P1P, P1S, A1, A1 mini). X1, X1C, X1E und H2 senden bei jedem Report den vollen Zustand.</p>
 <div class="bbl-opt"><?= schalter('hms_text', (bool)$bbl['hms_text'], 'HMS-Meldungen (Fehler und Warnungen des Druckers) als Text senden: <code>bambulab/&lt;name&gt;/fehler/hms_text</code>') ?></div>
+<div class="bbl-opt"><?= schalter('hms_klartext', !empty($bbl['hms_klartext']), 'HMS-Klartext aus der Textliste von Bambu laden: <code>fehler/hms_klartext</code>, <code>fehler/hms_code</code>, <code>fehler/text</code>') ?>
+ <select class="lb-select" name="hms_sprache" id="hms_sprache" title="Sprache der Texte"><option value="de"<?= ($bbl['hms_sprache'] ?? 'de') === 'de' ? ' selected' : '' ?>>Deutsch</option><option value="en"<?= ($bbl['hms_sprache'] ?? 'de') === 'en' ? ' selected' : '' ?>>Englisch</option></select></div>
+<p class="hinweis">Der Drucker meldet nur Zahlen. Mit dieser Option lädt das Plugin die öffentliche Textliste von Bambu (<code>e.bambulab.com</code>, ohne Konto und ohne Zugangsdaten, gesendet wird nur der Modellcode aus den ersten drei Zeichen der Seriennummer), einmal je Woche, und merkt sie sich im Datenordner. Der LoxBerry braucht dafür Internet. Nicht jeder Code hat einen Text; dann steht der Code da. Ab Werk aus.</p>
+<?php foreach ((array)($status['hms_texte'] ?? []) as $k => $ht) { ?>
+<p class="hinweis">Textliste <?= h($k) ?>: <?= !empty($ht['geladen']) ? 'geladen am ' . h(date('d.m.Y H:i', (int)$ht['geladen'])) . ', ' . (int)$ht['hms'] . ' HMS-Texte, ' . (int)$ht['fehler'] . ' Fehlertexte' : 'noch nicht geladen' ?><?= !empty($ht['letzter_fehler']) ? ' – <span class="bbl-warn">' . h($ht['letzter_fehler']) . ', neuer Versuch später</span>' : '' ?></p>
+<?php } ?>
 </div>
 
 <div class="lb-card">
@@ -214,6 +220,7 @@ Ein ausgeschalteter Drucker ist kein Fehler (<code>bambulab/status/ok</code> ble
         ['licht/kammer | kammer2 | arbeit', '0/1', 'Lichter (Arbeitslicht: blinkend im Ruhezustand = 0)', 'Licht'],
         ['wlan_dbm', 'dBm', 'WLAN-Signal des Druckers', 'Status'],
         ['fehler/code | hms_anzahl | hms_text', '-', 'Fehlercode, Zahl der HMS-Meldungen und ihre Codes (HMS_xxxx_xxxx_xxxx_xxxx, der Klartext steht bei Bambu online)', 'Fehler'],
+        ['fehler/hms_klartext | hms_code | text', 'Text', 'nur mit der Option HMS-Klartext: Klartext der HMS-Meldungen (mehrere mit " | " getrennt, höchstens 1000 Zeichen), Code der ersten Meldung und Text zum Fehlercode des Druckers; Meldungen ohne Text zeigen ihren Code, nicht jeder Code hat einen Text. Im Miniserver als virtuellen Texteingang anlegen; lange Texte kann er kürzen. Für Schaltlogik hms_anzahl nutzen', 'Fehler'],
         ['ams/<n>/temperatur_c | feuchte | feuchte_prozent | trocknung_min', '°C, 1–5, %, min', 'AMS-Einheit: Temperatur, Feuchte (Stufe 1–5, bei AMS 2 Pro auch Prozent), Trocknungszeit', 'AMS'],
         ['ams/<n>/slot/<k>/belegt | typ | farbe | rest_prozent', '0/1, Text, RRGGBB, %', 'Slot: belegt, Filamenttyp, Farbe, Restmenge (unbekannt = nicht gesendet)', 'AMS'],
         ['ams/aktiv_slot', '-', 'Aktiver Slot: 254/255 = externe Spule, sonst AMS × 4 + Slot', 'AMS'],
@@ -321,7 +328,12 @@ foreach ($namen as $a) {
                 continue;
             }
             echo '<div class="lb-table-scroll"><table class="lb-table"><tr><th>Topic</th><th>Wert</th></tr>';
-            foreach (BambuMapper::map($print, $ver, (bool)$bbl['hms_text']) as $k => $v) {
+            $texte = null;
+            if (!empty($bbl['hms_klartext'])) {            // nur den Zwischenspeicher lesen, die Oberfläche lädt nichts aus dem Internet
+                $texte = new BambuHmsTexte($paths->data, (string)$dev['seriennummer'], (string)$bbl['hms_sprache']);
+                $texte->ladeCache();
+            }
+            foreach (BambuMapper::map($print, $ver, (bool)$bbl['hms_text'], $texte) as $k => $v) {
                 echo '<tr><td>bambulab/' . h($dev['name'] . '/' . $k) . '</td><td>' . h($v) . '</td></tr>';
             }
             echo '</table></div>';

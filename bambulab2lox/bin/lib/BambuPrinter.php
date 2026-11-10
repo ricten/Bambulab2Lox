@@ -30,6 +30,7 @@ final class BambuPrinter
     private float $lastCmd = 0.0;
     private int $seq;
     private int $reports = 0;
+    private ?BambuHmsTexte $hmsTexte = null;    // Klartext zu HMS-Meldungen (nur wenn die Option an ist)
 
     public function __construct(private array $cfg, private readonly Logger $log, private readonly string $folder, private int $pushallAbstand = 300)
     {
@@ -51,6 +52,12 @@ final class BambuPrinter
         $this->cfg = $cfg;
         $this->name = $cfg['name'];
         $this->pushallAbstand = $pushallAbstand;
+    }
+
+    /** Texte fuer HMS-Meldungen und Fehlercodes setzen (null = nur Codes senden). */
+    public function setHmsTexte(?BambuHmsTexte $t): void
+    {
+        $this->hmsTexte = $t;
     }
 
     public function connected(): bool
@@ -239,7 +246,7 @@ final class BambuPrinter
     /** @return array<string,string> alle aktuellen Topics (relativ), ohne verbunden */
     public function werte(bool $hmsText): array
     {
-        return $this->print ? BambuMapper::map($this->print, $this->ver, $hmsText) : [];
+        return $this->print ? BambuMapper::map($this->print, $this->ver, $hmsText, $this->hmsTexte) : [];
     }
 
     /** Wahr, wenn der Drucker zuletzt einen Druckbefehl wegen fehlendem Entwicklermodus abgelehnt hat. */

@@ -25,6 +25,7 @@ Liest **Bambu-Lab-Drucker** über deren lokalen MQTT-Broker (TLS, Port 8883, Acc
 ## Topics (Auszug)
 `bambulab/drucker1/status_text`, `zustand/druckt|pausiert|fertig|abgebrochen|fehler`, `fortschritt_prozent`, `restzeit_min`, `schicht`, `duese_c`, `bett_c`, `kammer_c`, `licht/kammer`, `ams/<n>/slot/<k>/typ`, `fehler/hms_text`, `verbunden`, `bambulab/status/ok|zaehler|ts`.
 Befehle: `bambulab/befehl/<name>/licht_kammer|licht_kammer2|licht_arbeit|pause|fortsetzen|geschwindigkeit|stopp`, Quittung unter `…/quittung`.
+Mit der Option **HMS-Klartext** (ab Werk aus, braucht Internet) kommen zusätzlich `fehler/hms_klartext`, `fehler/hms_code` und `fehler/text` mit den Texten aus der öffentlichen Textliste von Bambu (einmal je Woche geladen; nicht jeder Code hat einen Text).
 Vollständige Liste: [docs/wiki/MQTT-Topics.md](docs/wiki/MQTT-Topics.md).
 
 ## MQTT-Broker

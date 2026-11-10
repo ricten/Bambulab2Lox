@@ -74,6 +74,10 @@ function ladeZustand(string $fix, string $state): array
 {
     $f = $state === 'leerlauf' ? 'h2c_leerlauf_fertig.json' : 'h2c_druckt.json';
     $j = json_decode((string)file_get_contents("$fix/$f"), true);
+    if ($state === 'fehler') {                 // fehlgeschlagener Druck mit Fehlercode des Druckers (0x05004042)
+        $j['print']['gcode_state'] = 'FAILED';
+        $j['print']['print_error'] = 83902530;
+    }
     return $j['print'];
 }
 

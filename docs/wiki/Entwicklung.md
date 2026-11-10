@@ -28,6 +28,7 @@ Der gemeinsame Code liegt außerhalb des Repos in `loxberry-plugins/common/php/`
 |---|---|
 | `BambuPrinter` | Eine Drucker-Verbindung (TLS-MQTT, Wiederverbinden, `pushall`), Zustand, Veröffentlichen nur geänderter Werte, Befehle mit Quittung, Status (ok / aus / Fehler) |
 | `BambuState` | Reports zusammenführen (Deep Merge; Listen nur dort über ihren Schlüssel, wo die Einträge stabil sind) |
+| `BambuHmsTexte` | Klartext zu HMS-Meldungen und Fehlercodes: lädt die öffentliche Bambu-Liste (nur bei eingeschalteter Option, höchstens einmal je Woche, Zwischenspeicher im Datenordner, Ausfall nie fatal) |
 | `BambuMapper` | Zustand → Topics (Packwerte, Lüfterskala, HMS-Text, Plausibilität, H2-Düsen, AMS) |
 | `BambuCommands` | erlaubte Befehle, Prüfung, Nachricht an den Drucker, Auswertung der Antwort |
 | `BambuConfig` | Standardwerte, Laden, Prüfen der Eingaben, Druckerliste, Geheimnisse |

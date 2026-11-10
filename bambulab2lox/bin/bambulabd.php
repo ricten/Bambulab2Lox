@@ -108,6 +108,8 @@ $bbl = BambuConfig::load($paths->config);
 $cfgMtime = -1;
 /** @var array<string,BambuPrinter> $printers */
 $printers = [];
+/** @var array<string,BambuHmsTexte> $hmsTexte Klartext-Listen je Modell und Sprache (nur bei eingeschalteter Option) */
+$hmsTexte = [];
 $mqtt = null;
 $mqttErr = '';
 $mqttBackoff = 2;
@@ -163,7 +165,20 @@ while ($running) {
                     $printers[$n] = new BambuPrinter($d, $log, $paths->folder, (int)$bbl['pushall_abstand']);
                 }
             }
-            $log->info('Konfiguration geladen: ' . count($printers) . ' Drucker');
+            // HMS-Klartext: je Modell und Sprache eine Textliste, nur wenn die Option an ist (sonst gar kein Abruf)
+            $hmsNeu = [];
+            foreach ($printers as $n => $pr) {
+                $t = null;
+                if (!empty($bbl['hms_klartext'])) {
+                    $probe = new BambuHmsTexte($paths->data, (string)$soll[$n]['seriennummer'], (string)$bbl['hms_sprache']);
+                    $k = $probe->schluessel();
+                    $hmsNeu[$k] = $hmsNeu[$k] ?? ($hmsTexte[$k] ?? $probe);
+                    $t = $hmsNeu[$k];
+                }
+                $pr->setHmsTexte($t);
+            }
+            $hmsTexte = $hmsNeu;
+            $log->info('Konfiguration geladen: ' . count($printers) . ' Drucker' . ($hmsTexte ? ', HMS-Klartext an (' . BambuHmsTexte::cleanSprache($bbl['hms_sprache']) . ')' : ''));
         }
 
         // MQTT zum LoxBerry-Broker (mit wachsendem Abstand bei Fehlern)
@@ -218,6 +233,13 @@ while ($running) {
         // Geaenderte Werte hoechstens einmal pro Sekunde senden
         if ($now !== $lastPublish) {
             $lastPublish = $now;
+            foreach ($hmsTexte as $k => $t) {          // Textliste laden (beim ersten Start und danach hoechstens einmal je Woche)
+                if ($t->aktualisieren($now)) {
+                    $log->info('HMS-Klartext geladen (' . $k . '): ' . $t->info()['hms'] . ' HMS-Texte, ' . $t->info()['fehler'] . ' Fehlertexte');
+                } elseif ($t->info()['letzter_fehler'] !== '') {
+                    $log->warn('HMS-Klartext (' . $k . '): ' . $t->info()['letzter_fehler'] . '; der Zwischenspeicher bleibt in Gebrauch, neuer Versuch später', 'hms-texte-' . $k);
+                }
+            }
             $results = [];
             foreach ($printers as $n => $pr) {
                 $results[$n] = $pr->status($now);
@@ -245,7 +267,7 @@ while ($running) {
                 'service' => 'running', 'time' => $now, 'started' => $started,
                 'ok' => $ok, 'zaehler' => $zaehler, 'ts' => $lastStatusTopics,
                 'mqtt' => $mqttOk ? 1 : 0, 'mqtt_error' => $mqttErr, 'mqtt_seit' => $mqttSince,
-                'drucker' => $results, 'version' => AppVersion::CURRENT,
+                'drucker' => $results, 'hms_texte' => array_map(fn($t) => $t->info(), $hmsTexte), 'version' => AppVersion::CURRENT,
             ]);
         }
     } catch (Throwable $e) {

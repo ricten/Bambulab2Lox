@@ -54,7 +54,12 @@ Schema `bambulab/<name>/<wert>`, `<name>` = Name des Druckers aus den Einstellun
 |---|---|---|
 | `fehler/code` | – | Fehlercode (`print_error`), 0 = kein Fehler |
 | `fehler/hms_anzahl` | – | Zahl der HMS-Meldungen |
-| `fehler/hms_text` | Text | Codes kommagetrennt (`HMS_xxxx_xxxx_xxxx_xxxx`), `keine` ohne Meldung; abschaltbar. Den Klartext zu einem Code gibt es bei Bambu online (HMS-Datenbank) |
+| `fehler/hms_text` | Text | Codes kommagetrennt (`HMS_xxxx_xxxx_xxxx_xxxx`), `keine` ohne Meldung; abschaltbar |
+| `fehler/hms_klartext` | Text | nur mit der Option **HMS-Klartext**: Klartext der Meldungen, mehrere mit ` \| ` getrennt (höchstens 1000 Zeichen, sauber an einer UTF-8-Grenze gekürzt, mit `…`); für eine Meldung ohne Text steht ihr Code da; `keine` ohne Meldung |
+| `fehler/hms_code` | Text | nur mit der Option **HMS-Klartext**: Code der ersten Meldung (`HMS_xxxx_xxxx_xxxx_xxxx`), `keine` ohne Meldung |
+| `fehler/text` | Text | nur mit der Option **HMS-Klartext**: Text zum Fehlercode des Druckers (`fehler/code`), ohne bekannten Text der Code als 8 Hex-Zeichen, `keine` bei Fehlercode 0 |
+
+Nicht jeder Code hat bei Bambu einen Text (bei einer Messung am H2C hatten zwei von fünf Meldungen einen). Die Zuordnung läuft über den Code: HMS = `attr` und `code` als 16 Hex-Zeichen, Fehler = `print_error` als 8 Hex-Zeichen. Die Texte laden sich einmal je Woche aus der Bambu-Liste (Option abgeschaltet = kein Abruf und keine dieser drei Topics).
 
 ## AMS und externe Spulen
 

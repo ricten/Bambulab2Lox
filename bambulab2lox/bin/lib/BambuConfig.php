@@ -24,6 +24,8 @@ final class BambuConfig
         return [
             'pushall_abstand' => 300,    // Sekunden: nur bei Modellen mit Teil-Updates (P1, A1) wird der volle Zustand so oft neu angefordert
             'hms_text' => true,          // HMS-Meldungen als Text (HMS_xxxx_xxxx_xxxx_xxxx) senden
+            'hms_klartext' => false,     // Klartext zu HMS-Meldungen und Fehlercodes aus der oeffentlichen Textliste von Bambu laden (braucht Internet)
+            'hms_sprache' => 'de',       // Sprache dieser Texte: de oder en
             'mqtt' => ['eigener_broker' => false, 'host' => '', 'port' => 1883, 'benutzer' => '', 'passwort' => ''],
             'drucker' => $d,
         ];
@@ -58,6 +60,8 @@ final class BambuConfig
         $out['drucker'] = array_slice($d, 0, self::MAX_DRUCKER);
         $out['pushall_abstand'] = max(getenv('BBL_DEV_DIR') ? 1 : 60, min(3600, (int)$out['pushall_abstand']));
         $out['hms_text'] = (bool)$out['hms_text'];
+        $out['hms_klartext'] = !empty($out['hms_klartext']);
+        $out['hms_sprache'] = BambuHmsTexte::cleanSprache($out['hms_sprache'] ?? 'de');
         $out['mqtt'] = array_merge($def['mqtt'], is_array($c['mqtt'] ?? null) ? $c['mqtt'] : []);
         return $out;
     }
@@ -98,6 +102,8 @@ final class BambuConfig
         if (isset($post['pushall_abstand'])) {
             $new['pushall_abstand'] = max(60, min(3600, (int)$post['pushall_abstand']));
             $new['hms_text'] = !empty($post['hms_text']);
+            $new['hms_klartext'] = !empty($post['hms_klartext']);
+            $new['hms_sprache'] = BambuHmsTexte::cleanSprache($post['hms_sprache'] ?? 'de');
         }
         if (is_array($post['drucker'] ?? null)) {
             for ($i = 0; $i < self::MAX_DRUCKER; $i++) {

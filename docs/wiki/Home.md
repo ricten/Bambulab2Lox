@@ -12,7 +12,7 @@
 - **Zustand:** Leerlauf, Vorbereitung, Druck, Pause, fertig, abgebrochen, Fehler – als Text und als Schalter 0/1
 - **Druck:** Fortschritt, Restzeit, Schicht, Auftragsname, Geschwindigkeit
 - **Temperaturen und Lüfter:** Düse, Bett, Kammer; H2: je Düse, aktive Düse, Düsenwechsel und die Düsen im Halter
-- **Licht, WLAN, Fehler:** Lichter, Signalstärke, Fehlercode und HMS-Meldungen als Code
+- **Licht, WLAN, Fehler:** Lichter, Signalstärke, Fehlercode und HMS-Meldungen als Code; auf Wunsch (Option, braucht Internet) der **Klartext** aus der öffentlichen Textliste von Bambu
 - **AMS:** Temperatur, Feuchte, Slots mit Filamenttyp, Farbe und Restmenge, aktiver Slot, externe Spule(n)
 - **Befehle aus Loxone** (ab Werk gesperrt, je Drucker in drei Stufen freizugeben, mit Quittung): Kammerlicht, zweites Kammerlicht, Arbeitslicht, Pause, Fortsetzen, Geschwindigkeit, Stopp
 - Veröffentlicht nur **Änderungen** (alle 5 Minuten alle Werte); ein ausgeschalteter Drucker ist kein Fehler

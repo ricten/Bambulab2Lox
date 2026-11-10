@@ -7,7 +7,9 @@ Reiter: **Drucker · MQTT · Einbindung in Loxone · Test · Logdateien**. Ände
 | Einstellung | Standard | Beschreibung |
 |---|---|---|
 | Voller Zustand alle … Sekunden anfordern | 300 s | 60–3600 s. Nur für Modelle, die ihren Zustand in Teilen melden (P1P, P1S, A1, A1 mini). X1, X1C, X1E und H2 senden bei jedem Report den vollen Zustand; bei ihnen wird der volle Zustand nur beim Verbinden angefordert |
-| HMS-Meldungen als Text senden | an | `fehler/hms_text` mit den Codes (`HMS_xxxx_xxxx_xxxx_xxxx`); den Klartext zu einem Code gibt es bei Bambu online (HMS-Datenbank) |
+| HMS-Meldungen als Text senden | an | `fehler/hms_text` mit den Codes (`HMS_xxxx_xxxx_xxxx_xxxx`) |
+| HMS-Klartext aus der Textliste von Bambu laden | aus | Zusätzlich `fehler/hms_klartext`, `fehler/hms_code` und `fehler/text` (siehe [MQTT-Topics](MQTT-Topics.md)). Braucht **Internet** auf dem LoxBerry: Das Plugin lädt die öffentliche Textliste von Bambu (`e.bambulab.com`, kein Konto, keine Zugangsdaten; gesendet wird nur der Modellcode aus den ersten drei Zeichen der Seriennummer), beim ersten Start und danach einmal je Woche, und merkt sie sich im Datenordner. Fällt das Internet aus, bleibt die gespeicherte Liste in Gebrauch (neuer Versuch frühestens nach einer Stunde, dann in wachsendem Abstand). Die Texte liegen nicht im Plugin |
+| Sprache des Klartextes | Deutsch | Deutsch oder Englisch (jede Sprache hat ihre eigene gespeicherte Liste) |
 
 ## Drucker
 
