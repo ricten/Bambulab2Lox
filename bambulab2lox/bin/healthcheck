@@ -1,0 +1,62 @@
+#!/usr/bin/php
+<?php
+/**
+ * Healthcheck fuer die LoxBerry-Healthcheck-Seite ("Mein LoxBerry" > "Healthcheck").
+ * Aufruf: "healthcheck title" (nur die Beschreibung) oder "healthcheck check" (Pruefung, Ausgabe als JSON).
+ * Statuscodes: 3 Fehler (Benachrichtigung und E-Mail), 4 Warnung, 5 OK, 6 Info.
+ * Der Dienst schreibt seinen Zustand jede Sekunde nach /dev/shm/<Ordner>/status.json; hier wird nur gelesen.
+ * Ein ausgeschalteter Drucker (ohne laufenden Druck) ist kein Fehler und kein Grund fuer eine Warnung.
+ * Muss schnell sein und darf nichts anderes ausgeben als das JSON.
+ */
+$desc = 'Bambulab2Lox: Dienst, MQTT-Broker und Drucker';
+$arg = $argv[1] ?? '';
+if ($arg === 'title') {
+    echo $desc, "\n";
+    exit(0);
+}
+if ($arg !== 'check') {
+    exit(0);
+}
+
+$dev = getenv('BBL_DEV_DIR');
+$run = getenv('BBL_DEV_RUN') ?: ($dev ? $dev . '/run' : '/dev/shm/REPLACELBPPLUGINDIR');
+$log = $dev ? $dev . '/bambulab.log' : 'REPLACELBPLOGDIR/bambulab.log';
+
+function ergebnis(string $desc, int $status, string $text, string $log): void
+{
+    $o = ['desc' => $desc, 'status' => $status, 'result' => trim((string)preg_replace('/\s+/', ' ', $text))];
+    if (is_file($log)) {
+        $o['logfile'] = $log;           // nur mit echtem Wert, sonst fuehrt der Knopf ins Leere
+    }
+    echo json_encode($o, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), "\n";
+    exit(0);
+}
+
+$st = is_file("$run/status.json") ? json_decode((string)@file_get_contents("$run/status.json"), true) : null;
+if (!is_array($st) || time() - (int)($st['time'] ?? 0) > 60) {
+    ergebnis($desc, 3, 'Der Dienst läuft nicht (keine aktuelle Statusmeldung). Der Wächter startet ihn spätestens nach einer Minute neu; sonst im Plugin den Reiter „Test“ und die Logdatei ansehen.', $log);
+}
+if (empty($st['mqtt'])) {
+    ergebnis($desc, 4, 'Keine Verbindung zum MQTT-Broker: ' . ($st['mqtt_error'] ?? 'unbekannt'), $log);
+}
+$drucker = is_array($st['drucker'] ?? null) ? $st['drucker'] : [];
+if (!$drucker) {
+    ergebnis($desc, 6, 'Kein Drucker eingerichtet (Plugin öffnen, Reiter „Drucker“).', $log);
+}
+$fehler = [];
+$aus = [];
+foreach ($drucker as $name => $r) {
+    if (!empty($r['aus'])) {
+        $aus[] = $name;
+    } elseif (empty($r['ok'])) {
+        $fehler[] = $name . ' (' . ($r['error'] ?? 'Fehler') . ')';
+    }
+}
+if ($fehler) {
+    ergebnis($desc, 4, 'Drucker mit Problem: ' . implode(', ', $fehler), $log);
+}
+$text = count($drucker) . ' Drucker in Ordnung';
+if ($aus) {
+    $text .= ' (nicht erreichbar, vermutlich ausgeschaltet: ' . implode(', ', $aus) . ')';
+}
+ergebnis($desc, 5, $text . ', Version ' . ($st['version'] ?? '?'), $log);

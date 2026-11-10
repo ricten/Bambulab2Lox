@@ -1,0 +1,10 @@
+*.zip
+build/
+*.log
+*.local.cfg
+
+# Testlaufzeit
+tests/tmp/
+
+# Python
+__pycache__/
