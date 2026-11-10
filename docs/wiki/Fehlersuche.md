@@ -5,7 +5,7 @@ Zuerst im Plugin den Reiter **Test** öffnen: **Selbstprüfung** und **Sofort ab
 | Symptom | Ursache / Lösung |
 |---|---|
 | Kästchen grau, „nicht erreichbar (ausgeschaltet?) – kein Fehler“ | Der Drucker ist aus oder nicht im Netz. Kein Fehler, solange kein Druck lief. Host/IP prüfen, Drucker einschalten |
-| Kästchen rot, „Anmeldung abgelehnt: Access Code falsch?“ | Der Access Code stimmt nicht (er ändert sich, wenn man ihn am Drucker neu erzeugt). Neu eintragen. Ist der **LAN-Modus** aus? Ohne LAN-Modus nimmt der Drucker die lokale Anmeldung nicht an |
+| Kästchen rot, „Anmeldung abgelehnt: Access Code falsch?“ | Der Access Code stimmt nicht (er ändert sich, wenn man ihn am Drucker neu erzeugt). Neu eintragen. Am H2C geht die lokale Anmeldung auch ohne LAN-Modus; bei anderen Modellen kann der **LAN-Modus** nötig sein |
 | Kästchen rot, „Verbindung verloren, während ein Druck lief“ | Der Drucker war mitten im Druck nicht mehr erreichbar (WLAN, Router, Stromausfall). Das Plugin verbindet sich selbst wieder; der Fehler verschwindet danach |
 | Selbstprüfung: „TCP-Verbindung … fehlgeschlagen“ | Falsche IP, Drucker aus, Firewall. Die IP am Drucker unter Einstellungen → Netzwerk nachsehen und eine feste IP vergeben |
 | Selbstprüfung: „Keine Antwort des Druckers innerhalb von … s“ | Anmeldung klappt, aber es kommen keine Reports. Falsche **Seriennummer** (steckt im Topic `device/<Seriennummer>/report`)? Groß-/Kleinschreibung beachten, das Plugin schreibt sie groß |

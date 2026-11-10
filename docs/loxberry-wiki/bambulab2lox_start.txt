@@ -1,0 +1,216 @@
+====== Bambulab2Lox ======
+
+===== Plugin-Daten =====
+
+^ Autor | Rico Tengler |
+^ Logo | {{:plugins:bambulab2lox:bambulab2lox.png?64|Bambulab2Lox}} |
+^ Status | BETA |
+^ Version | 0.1.0 |
+^ Min. LB Version | 4.0 (benötigt PHP 8.4 mit der Erweiterung openssl) |
+^ Release Download | [[https://github.com/ricten/Bambulab2Lox/releases/latest|GitHub Releases (aktuelle Version)]] \\ [[https://github.com/ricten/Bambulab2Lox/releases/download/v0.1.0/bambulab2lox-0.1.0.zip|bambulab2lox-0.1.0.zip]] |
+^ Pre-Release Download | - |
+^ Quellcode | [[https://github.com/ricten/Bambulab2Lox|github.com/ricten/Bambulab2Lox]] (MIT-Lizenz) |
+^ Beschreibung | Liest Bambu-Lab-Drucker über deren lokalen MQTT-Broker aus (kein Cloud-Zugriff) und veröffentlicht Zustand, Fortschritt, Temperaturen, Lüfter, Lichter, AMS und Fehler per MQTT. Über das LoxBerry-MQTT-Gateway gelangen die Werte an den Loxone Miniserver. Dazu Befehle aus Loxone (Licht, Pause, Fortsetzen, Geschwindigkeit, Stopp), ab Werk gesperrt und mit Quittung. Ersatz für den ioBroker-Adapter bambulab. |
+^ Sprachen | DE |
+^ Diskussion | FORUM-LINK-EINTRAGEN |
+
+----
+
+===== 1. Überblick =====
+
+**Bambulab2Lox** verbindet sich direkt mit dem **MQTT-Broker im Drucker** (TLS, Port 8883, Benutzer ''bblp'', Passwort ist der Access Code) und stellt die Werte als **MQTT-Topics** auf dem MQTT-Broker des LoxBerry bereit. Das LoxBerry-MQTT-Gateway macht daraus **virtuelle Eingänge** für den Loxone Miniserver. In der Gegenrichtung nimmt das Plugin **Befehle** aus Loxone an und gibt sie an den Drucker weiter. Nichts läuft über die Bambu-Cloud.
+
+  Drucker (lokaler MQTT-Broker)  <->  Bambulab2Lox (LoxBerry)  <->  MQTT-Broker  <->  MQTT-Gateway  <->  Miniserver
+
+**Stand: Beta.** Am echten Gerät geprüft ist bisher nur ein **Bambu Lab H2C** (Firmware 01.03.00.00): Auslesen, die drei Lichter, Geschwindigkeit, Pause, Fortsetzen, Stopp und der Abruf der HMS-Klartexte. **Alle anderen Modelle** (X1, X1C, X1E, P1P, P1S, A1, A1 mini, H2D, H2S) sind nach der inoffiziellen Beschreibung des Druckerprotokolls ([[https://github.com/Doridian/OpenBambuAPI/blob/main/mqtt.md|OpenBambuAPI]]) umgesetzt, aber **nicht ausprobiert**. Rückmeldungen zu anderen Modellen sind ausdrücklich erwünscht.
+
+Eigenschaften:
+
+  * Bis zu **8 Drucker**, jeder unter eigenem Namen (''bambulab/drucker1/…'')
+  * **Zustand** als deutscher Klartext (bereit, bereitet vor, druckt, pausiert, fertig, abgebrochen, Fehler) und als Schalter 0/1
+  * **Druck:** Fortschritt, Restzeit, Schicht, Auftragsname, Geschwindigkeit
+  * **Temperaturen und Lüfter:** Düse, Bett, Kammer, Lüfter; H2: je Düse, aktive Düse, Düsenwechsel, Düsen im Halter
+  * **Licht, WLAN, Fehler:** Lichter, Signalstärke, Fehlercode und HMS-Meldungen; auf Wunsch der **Klartext** aus der öffentlichen Textliste von Bambu (Option, braucht Internet)
+  * **AMS:** Temperatur, Feuchte, Slots mit Filamenttyp, Farbe und Restmenge, aktiver Slot, externe Spule(n)
+  * **Befehle aus Loxone:** Kammerlicht, zweites Kammerlicht, Arbeitslicht, Pause, Fortsetzen, Geschwindigkeit, Stopp (ab Werk gesperrt, je Drucker in drei Stufen freizugeben, mit Quittung)
+  * Veröffentlicht nur **Änderungen** (alle 5 Minuten alle Werte); ein ausgeschalteter Drucker ist kein Fehler
+  * MQTT-Broker des LoxBerry **oder eigener Broker**
+  * Lebenszeichen (''bambulab/status/ok'', ''zaehler'', ''ts''), Autostart, Watchdog, Healthcheck
+
+===== 2. Installation =====
+
+  - ZIP von der Release-Seite herunterladen.
+  - **Am Drucker** unter //Einstellungen → WLAN/Netzwerk// IP-Adresse, **Seriennummer** und **Access Code** ablesen. Am H2C geht das Auslesen **ohne LAN-Modus und ohne Entwicklermodus**; bei anderen Modellen kann der LAN-Modus nötig sein (er schaltet die Bambu-Cloud für diesen Drucker ab; Bambu Studio im selben Netz funktioniert weiter).
+  - Nur für **Pause, Fortsetzen, Geschwindigkeit und Stopp**: am Drucker den **Entwicklermodus** einschalten (//Einstellungen → WLAN/Netzwerk → Nur LAN-Modus → Entwicklermodus//). Er schaltet die Bambu-Cloud ab und ist von Bambu nicht offiziell unterstützt. Das **Licht** lässt sich auch ohne ihn schalten.
+  - LoxBerry → **Plugin-Verwaltung** → **Plugin installieren**. Die Installation startet den Dienst.
+  - Plugin **Bambulab2Lox** öffnen, Reiter **Drucker**: Host/IP, Seriennummer und Access Code eintragen, **Aktiv** anhaken, speichern.
+  - Im **MQTT Gateway** das Abo ''bambulab/#'' eintragen (siehe 5.1). Der Reiter **MQTT** zeigt, ob es steht.
+  - Reiter **Test** → **Selbstprüfung** und **Sofort abrufen**. Nach wenigen Sekunden erscheinen Werte unter ''bambulab/<name>/*''.
+
+==== 2.1 Update ====
+
+Als Update installieren. Konfiguration und Daten bleiben erhalten; neue Einstellungen ergänzt das Plugin automatisch mit Standardwerten.
+
+**Automatische Updates:** Bambulab2Lox liefert eine ''release.cfg'' im GitHub-Repository mit. Neue Installationen stehen in der Plugin-Verwaltung bei „Automatische Updates“ auf //Releases//: LoxBerry prüft täglich und installiert neuere Versionen selbst. Die Einstellung (//Aus//, //Benachrichtigen//, //Releases//) lässt sich in der Plugin-Verwaltung ändern.
+
+**Immer das neueste Release:** [[https://github.com/ricten/Bambulab2Lox/releases/latest/download/bambulab2lox.zip|bambulab2lox.zip]] (ZIP ohne Version im Dateinamen, zeigt immer auf die aktuelle Version).
+
+==== 2.2 Deinstallation ====
+
+Plugin entfernen. Dienst und RAM-Daten werden gelöscht. Am Drucker bleibt ein eingeschalteter LAN- oder Entwicklermodus eingeschaltet, bis er dort wieder ausgeschaltet wird.
+
+===== 3. Konfiguration (LoxBerry) =====
+
+Reiter: **Drucker · MQTT · Einbindung in Loxone · Test · Logdateien**. Änderungen wirken ohne Neustart; jeder Reiter speichert nur seine eigenen Einstellungen.
+
+==== 3.1 Drucker ====
+
+Bis zu acht Einträge. Ein Kästchen zeigt den Zustand (grün verbunden, grau nicht erreichbar oder nicht aktiv, rot Fehler mit Text).
+
+^ Spalte ^ Beschreibung ^
+| Aktiv | Nur aktive Einträge werden abgefragt |
+| Name im Topic | ''a-z 0-9 _ -'', leer = ''drucker1'', ''drucker2'' … |
+| Host/IP, Port | Adresse des Druckers im Heimnetz, MQTT-Port (Standard 8883) |
+| Seriennummer | Steht am Drucker; sie steckt im MQTT-Topic des Druckers, wird aber **nicht** an Loxone gesendet |
+| Access Code | Steht am Drucker; wird nie angezeigt, nie geloggt und nie per MQTT gesendet. Ein leeres Feld behält den gespeicherten Code |
+| Befehle freigeben | Drei Stufen (siehe 3.2), ab Werk alle aus |
+
+Der Drucker verwendet ein **selbst signiertes Zertifikat**, das das Plugin nicht prüft (das Gerät steht im Heimnetz). Die Verbindung ist verschlüsselt, aber nicht gegen einen Angreifer im selben Netz abgesichert.
+
+==== 3.2 Befehle freigeben ====
+
+^ Stufe ^ Befehle ^ Hinweis ^
+| Licht | Kammerlicht, zweites Kammerlicht (nur H2), Arbeitslicht | geht auch **ohne** Entwicklermodus |
+| Pause, Fortsetzen, Geschwindigkeit | ''pause'', ''fortsetzen'', ''geschwindigkeit'' (1–4) | greift in den laufenden Druck ein; braucht den **Entwicklermodus** am Drucker |
+| Stopp | ''stopp'' | bricht den Druck ab; braucht den **Entwicklermodus** am Drucker |
+
+Lehnt der Drucker Pause, Fortsetzen, Geschwindigkeit oder Stopp ab, steht in der Statuszeile ein Hinweis, dass der Entwicklermodus fehlt. Nie vorgesehen sind rohes G-Code, Druckaufträge starten, Firmware-Befehle und Kalibrierung.
+
+==== 3.3 Allgemein ====
+
+^ Einstellung ^ Standard ^ Beschreibung ^
+| Voller Zustand alle … Sekunden anfordern | 300 s | 60–3600 s; nur für Modelle, die ihren Zustand in Teilen melden (P1P, P1S, A1, A1 mini). X1, X1C, X1E und H2 senden bei jedem Report den vollen Zustand |
+| HMS-Meldungen als Text senden | an | ''fehler/hms_text'' mit den Codes |
+| HMS-Klartext aus der Textliste von Bambu laden | aus | Zusätzlich ''fehler/hms_klartext'', ''fehler/hms_code'' und ''fehler/text''. Braucht **Internet** auf dem LoxBerry: Das Plugin lädt einmal je Woche die öffentliche Textliste von Bambu (''e.bambulab.com'', kein Konto, keine Zugangsdaten; gesendet wird nur der Modellcode aus den ersten drei Zeichen der Seriennummer) und merkt sie sich. Nicht jeder Code hat einen Text |
+| Sprache des Klartextes | Deutsch | Deutsch oder Englisch |
+
+==== 3.4 MQTT-Broker (Reiter MQTT) ====
+
+Oben zeigt ein farbiges Feld das **Gateway-Abo** (grün ab einem passenden Abo, rot nur ohne Abo).
+
+^ Einstellung ^ Standard ^ Beschreibung ^
+| Eigenen MQTT-Broker verwenden | aus | Aus: Broker des LoxBerry (Zugangsdaten verwaltet LoxBerry) |
+| Host/IP, Port | - / 1883 | Eigener Broker (ohne TLS) |
+| Benutzer, Passwort | leer | Optional; das Passwort wird nie angezeigt oder geloggt |
+
+Das ist nicht der Broker des Druckers. Mit eigenem Broker erreichen die Werte den Miniserver nur, wenn das MQTT-Gateway diesen Broker abonniert.
+
+==== 3.5 Test und Logdateien ====
+
+^ Aktion ^ Wirkung ^
+| Sofort abrufen | Verbindet sich mit jedem Drucker und zeigt alle Topics und Werte, die das Plugin veröffentlichen würde |
+| Selbstprüfung | Konfiguration, TLS und Anmeldung je Drucker, Broker, Gateway-Abo, Dienst |
+| Dienst neu starten | Beendet und startet den Dienst |
+
+Der Loglevel wird in der LoxBerry-Plugin-Verwaltung eingestellt.
+
+===== 4. MQTT-Topics (Referenz) =====
+
+Schema ''bambulab/<name>/<wert>'', Zahlen mit Punkt ohne Einheit, Zustände 0/1, nicht retained. Felder, die ein Modell nicht liefert, werden nicht gesendet. Die vollständige Liste steht im [[https://github.com/ricten/Bambulab2Lox/blob/main/docs/wiki/MQTT-Topics.md|Repository]] und im Plugin im Reiter //Einbindung in Loxone//.
+
+^ Topic ^ Bedeutung ^
+| ''verbunden'' | 1 = Verbindung zum Drucker steht und Reports kommen an |
+| ''status_text'' | Zustand als Klartext: bereit, bereitet vor, druckt, pausiert, fertig, abgebrochen, Fehler |
+| ''status_roh'' | Zustand, wie ihn die Firmware meldet (IDLE, PREPARE, RUNNING, PAUSE, FINISH, FAILED) |
+| ''zustand/leerlauf'', ''druckt'', ''pausiert'', ''fertig'', ''abgebrochen'', ''fehler'' | Zustand als Schalter, genau einer ist 1 (abgebrochen = FAILED ohne Fehlercode) |
+| ''fortschritt_prozent'', ''restzeit_min'' | Fortschritt (%) und Restzeit (min) |
+| ''schicht'', ''schichten_gesamt'', ''auftrag'' | Schicht, Gesamtzahl der Schichten, Name des Auftrags |
+| ''geschwindigkeit/stufe'', ''geschwindigkeit/prozent'' | 1 leise, 2 standard, 3 sport, 4 irrsinn; Geschwindigkeit in % |
+| ''duese_c'', ''duese_soll_c'', ''bett_c'', ''bett_soll_c'', ''kammer_c'' | Temperaturen (°C) |
+| ''luefter/bauteil_prozent'', ''hilfs_prozent'', ''kammer_prozent'', ''duesenkuehlung_prozent'' | Lüfter (%) |
+| ''duese/<k>/temperatur_c'', ''soll_c'', ''duese/aktiv'', ''duese/anzahl'', ''duesenwechsel'' | H2: je Düse, aktive Düse (−1 beim Umschalten), Düsenwechsel läuft |
+| ''duesen/<id>/typ'', ''durchmesser_mm'', ''verschleiss'' | H2C: Düsen im Halter |
+| ''licht/kammer'', ''licht/kammer2'', ''licht/arbeit'' | Lichter (Arbeitslicht im Ruhezustand blinkend = 0) |
+| ''fehler/code'', ''fehler/hms_anzahl'', ''fehler/hms_text'' | Fehlercode, Zahl der HMS-Meldungen, Codes der Meldungen |
+| ''fehler/hms_klartext'', ''fehler/hms_code'', ''fehler/text'' | nur mit der Option HMS-Klartext: Texte der Meldungen, Code der ersten Meldung, Text zum Fehlercode |
+| ''ams/<n>/temperatur_c'', ''feuchte'', ''feuchte_prozent'', ''trocknung_min'' | AMS-Einheit |
+| ''ams/<n>/slot/<k>/belegt'', ''typ'', ''farbe'', ''rest_prozent'' | Slots eines AMS |
+| ''ams/aktiv_slot'', ''extern/<k>/typ'', ''extern/<k>/farbe'' | aktiver Slot (254 oder 255 = externe Spule), externe Spulen |
+| ''wlan_dbm'' | WLAN-Signal des Druckers |
+| ''info/modell'', ''info/firmware'', ''info/duesen_durchmesser_mm'', ''info/duesen_typ'' | aus der Antwort des Druckers |
+| ''bambulab/status/ok'' | 1 = alle Drucker in Ordnung (ein ausgeschalteter Drucker ohne laufenden Druck ist kein Fehler); der Broker setzt 0, wenn der Dienst abbricht |
+| ''bambulab/status/zaehler'' | Lebenszeichen 0–999, zählt alle 10 s |
+| ''bambulab/status/ts'' | Zeitstempel des letzten Lebenszeichens |
+| ''bambulab/befehl/<name>/<befehl>'' | Eingang für Befehle (siehe 5.3), Quittung unter ''…/quittung'' |
+
+Einige Deutungen stützen sich nur auf Messungen am H2C und nicht auf eine offizielle Beschreibung (gepackte Düsentemperaturen, aktive Düse, Lüfterskala 0–15 in Prozent).
+
+===== 5. Miniserver Anbindung =====
+
+==== 5.1 MQTT-Gateway ====
+
+Das Abonnement ''bambulab/#'' trägt das Plugin nur beim **Gateway V1** selbst ein. Das **Gateway V2** liest die Abo-Datei von Plugins nicht: Dort ''bambulab/#'' **von Hand** im MQTT Gateway unter Abonnements eintragen (das Plugin prüft es im Reiter MQTT). ''bambulab/status/ok'' und ''bambulab/status/zaehler'' im Gateway auf **No Cache** stellen.
+
+==== 5.2 Virtuelle Eingänge ====
+
+Das Gateway ersetzt ''/'' durch ''_'': ''bambulab/drucker1/fortschritt_prozent'' wird zu ''bambulab_drucker1_fortschritt_prozent''. Die Tabelle aller Eingänge zeigt das Plugin im Reiter //Einbindung in Loxone//.
+
+^ Eingang ^ Bedeutung ^
+| ''bambulab_drucker1_verbunden'' | 1 = Drucker verbunden |
+| ''bambulab_drucker1_zustand_druckt'' | 1 = Vorbereitung oder Druck läuft |
+| ''bambulab_drucker1_zustand_fertig'' | 1 = Druck fertig |
+| ''bambulab_drucker1_zustand_fehler'' | 1 = Druck mit Fehler beendet |
+| ''bambulab_drucker1_fortschritt_prozent'', ''…_restzeit_min'' | Fortschritt und Restzeit |
+| ''bambulab_drucker1_duese_c'', ''…_bett_c'', ''…_kammer_c'' | Temperaturen |
+| ''bambulab_drucker1_fehler_hms_anzahl'' | Zahl der HMS-Meldungen (für Schaltlogik) |
+| ''bambulab_drucker1_fehler_hms_klartext'', ''…_fehler_text'' | Texte (nur mit der Option HMS-Klartext), als **virtueller Texteingang** anlegen |
+| ''bambulab_status_ok'' | 1 = alle Drucker in Ordnung |
+| ''bambulab_status_zaehler'' | Lebenszeichen für die Ausfallerkennung |
+
+Ein Miniserver kann lange Texte kürzen. Für Alarme besser ''…_fehler_hms_anzahl'' oder ''…_fehler_code'' auswerten und den Text nur anzeigen. Keine Leerzeichen in Druckernamen verwenden.
+
+==== 5.3 Befehle ====
+
+Freigabe im Reiter //Drucker//. Virtueller Ausgang: Adresse ''/dev/udp/<LoxBerry-IP>/<UDP-Port>'' (Standard 11884, steht im Plugin im Reiter „Einbindung in Loxone“), Befehl bei EIN ''publish bambulab/befehl/<name>/<befehl> <wert>'' (ohne HTTP-Header/Body).
+
+^ Befehl ^ Wert ^ Wirkung ^
+| ''licht_kammer'' | 1 / 0 | Kammerlicht an / aus |
+| ''licht_kammer2'' | 1 / 0 | zweites Kammerlicht an / aus (nur H2) |
+| ''licht_arbeit'' | 1 / 0 | Arbeitslicht an / Ruhezustand (blinkend) |
+| ''pause'' | 1 | Druck pausieren (nur während des Drucks) |
+| ''fortsetzen'' | 1 | pausierten Druck fortsetzen |
+| ''geschwindigkeit'' | 1–4 | Geschwindigkeit setzen |
+| ''stopp'' | 1 | Druck abbrechen (während des Drucks oder in der Pause) |
+
+**Quittung:** Unter ''bambulab/befehl/<name>/<befehl>/quittung'' meldet das Plugin zuerst ''angenommen'' und dann ''ausgefuehrt'' oder ''abgelehnt: <Grund>''. Mögliche Gründe: gesperrt (Stufe nicht freigegeben), ungültiger Wert, Drucker nicht verbunden, zu schnell (höchstens ein Befehl je Sekunde und Drucker), es läuft kein Druck, der Druck ist nicht pausiert, **Drucker verlangt den Entwicklermodus**, keine Antwort des Druckers. Pause, Fortsetzen, Geschwindigkeit und Stopp lehnt die Firmware ohne Entwicklermodus ab.
+
+**Hinweis:** Die Befehle wurden am H2C mit einem Testskript geprüft. Über das Plugin selbst sind Pause, Fortsetzen und Stopp (sie gehen mit einer anderen MQTT-Dienstgüte hinaus) noch nicht am echten Drucker ausprobiert.
+
+===== 6. Tipps & Tricks =====
+
+  * Für „Druck fertig“ eignet sich ''zustand_fertig'', für „Druck abgebrochen“ ''zustand_abgebrochen''. Der Drucker meldet nach einem Abbruch weiter FAILED, bis ein neuer Druck startet.
+  * ''bambulab_status_zaehler'' im Miniserver überwachen: bleibt er stehen, läuft der Dienst nicht mehr.
+  * Mit eingeschaltetem Entwicklermodus (oder LAN-Modus) ist die Bambu-Cloud (Bambu Handy) für diesen Drucker aus. Bambu Studio im selben Netz geht weiter, mindestens vier Clients gleichzeitig wurden am H2C getestet.
+  * Mehrere Befehle in einem virtuellen Ausgang zeitlich versetzen: Das Plugin nimmt höchstens einen Befehl je Sekunde und Drucker an.
+
+===== 7. FAQ / Troubleshooting =====
+
+^ Symptom ^ Ursache / Lösung ^
+| Kästchen grau, „nicht erreichbar (ausgeschaltet?)“ | Der Drucker ist aus oder nicht im Netz. Kein Fehler, solange kein Druck lief. Host/IP prüfen |
+| Kästchen rot, „Anmeldung abgelehnt: Access Code falsch?“ | Der Access Code stimmt nicht (er ändert sich, wenn man ihn am Drucker neu erzeugt) |
+| Keine Antwort des Druckers | Falsche Seriennummer? Sie steckt im Topic ''device/<Seriennummer>/report'' |
+| Keine Werte in Loxone, aber in MQTT | Gateway V2: Abo ''bambulab/#'' von Hand eintragen; der Reiter MQTT zeigt, ob es steht |
+| Befehl: „Befehle sind gesperrt“ | Die Stufe des Befehls ist für diesen Drucker nicht freigegeben (Reiter Drucker) |
+| Befehl: „Drucker verlangt den Entwicklermodus“ | Pause, Fortsetzen, Geschwindigkeit und Stopp gehen nur im Entwicklermodus am Drucker (schaltet die Bambu-Cloud ab); das Licht geht ohne |
+| ''fehler/hms_klartext'' zeigt nur den Code | Nicht jeder Code hat bei Bambu einen Text (am H2C bei etwa zwei von fünf Meldungen) |
+| Keine Klartext-Topics trotz Option | Der LoxBerry braucht Internet (''e.bambulab.com''); die Wiederholung nach einem Fehler erfolgt frühestens nach einer Stunde |
+| Status zeigt „abgebrochen“ oder „Fehler“ | Der Drucker meldet nach einem abgebrochenen oder fehlgeschlagenen Druck weiter FAILED, bis ein neuer Druck startet |
+| In ''start-error.log'' steht einmal „log_db_queryid: Could not find database entry“ | Harmlos: Beim allerersten Start kennt die LoxBerry-Logbibliothek die neue Logdatei noch nicht |
+| ''status/ok'' = 0 | Falscher Access Code, Verbindungsverlust während eines Drucks oder ein Drucker, der nicht antwortet. Grund im Reiter MQTT und im Log |
+
+Weitere Hinweise: [[https://github.com/ricten/Bambulab2Lox/blob/main/docs/wiki/Fehlersuche.md|Fehlersuche im Repository]].
+
+===== 8. Changelog =====
+
+^ Version ^ Änderung ^
+| 0.1.0 | Erste Version (Beta): Auslesen von Bambu-Lab-Druckern über den lokalen MQTT-Broker, Befehle in drei Stufen (ab Werk gesperrt, mit Quittung), HMS-Klartext (Option), automatische Updates, Weboberfläche im LoxBerry Design System. Geprüft nur am H2C |

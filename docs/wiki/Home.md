@@ -4,7 +4,7 @@
 
 **Bambulab2Lox** ist ein LoxBerry-Plugin, das **Bambu-Lab-Drucker** über deren lokalen MQTT-Broker ausliest und die Werte an den MQTT-Broker des LoxBerry veröffentlicht. Über das LoxBerry-MQTT-Gateway gelangen sie an den Loxone Miniserver. Es nimmt außerdem Befehle aus Loxone an (Licht, Pause, Fortsetzen, Geschwindigkeit, Stopp). Es ersetzt den ioBroker-Adapter `bambulab`.
 
-> **Stand:** Geprüft ist bisher nur ein **H2C**. X1, X1C, X1E, P1P, P1S, A1, A1 mini und die anderen H2-Modelle sind nach der inoffiziellen Beschreibung des Druckerprotokolls umgesetzt, aber nicht an echten Geräten ausprobiert. Rückmeldungen sind willkommen.
+> **Stand: Beta (0.1.0).** Geprüft ist bisher nur ein **H2C** (Auslesen, Lichter, Geschwindigkeit, Pause, Fortsetzen, Stopp, HMS-Klartext). X1, X1C, X1E, P1P, P1S, A1, A1 mini und die anderen H2-Modelle sind nach der inoffiziellen Beschreibung des Druckerprotokolls umgesetzt, aber nicht an echten Geräten ausprobiert. Rückmeldungen sind willkommen.
 
 ## Was kann das Plugin?
 

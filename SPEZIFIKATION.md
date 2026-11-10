@@ -1,6 +1,6 @@
-# Bambulab2Lox – Spezifikation (Entwurf)
+# Bambulab2Lox – Spezifikation
 
-Stand: 2026-11-10 · Status: **Entwurf zur Abstimmung**, noch kein Code. Abschnitt 9 enthält die Befunde der ersten Lese-Messung am H2C.
+Stand: 2026-11-10 · Status: **Beta 0.1.0** (Entwurf umgesetzt, am H2C geprüft). Abschnitt 9 enthält die Befunde der Messungen am H2C, Abschnitt 11 die Umsetzung und die Abweichungen vom ursprünglichen Entwurf.
 Ersetzt den ioBroker-Adapter `bambulab` (DrozmotiX/ioBroker.bambulab, MIT-Lizenz; dient nur als Vorlage für die Datenfelder, Code wird nicht übernommen).
 Es gelten die Regeln aus `../CLAUDE.md` und `../README.md`.
 
@@ -17,7 +17,7 @@ Nicht Teil des Plugins: Kamerabild (RTSP/Tutk), Dateiübertragung (FTPS), Drucka
 | Punkt | Wert |
 |---|---|
 | Broker | im Drucker: `mqtts://<Drucker-IP>:8883` (TLS, Zertifikat von Bambu, selbstsigniert) |
-| Zugang | Benutzer `bblp`, Passwort = **Access Code** (am Display; LAN-Modus nötig) |
+| Zugang | Benutzer `bblp`, Passwort = **Access Code** (am Display unter Einstellungen → WLAN/Netzwerk; am H2C ist dafür kein LAN-Modus nötig, bei anderen Modellen eventuell) |
 | Lesen | Topic `device/<Seriennummer>/report` |
 | Schreiben | Topic `device/<Seriennummer>/request`, JSON `{"<Typ>": {"sequence_id": "<n>", "command": "…"}}` |
 | Vollbild | `{"pushing":{"sequence_id":"0","command":"pushall","version":1,"push_target":1}}` |
@@ -27,10 +27,10 @@ Verhalten je Modellreihe (laut OpenBambuAPI): X1 und H2 senden bei jedem Report 
 
 **TLS:** PHP verbindet per `ssl://` (Stream-Kontext). Zertifikatsprüfung ist standardmäßig **aus** (selbstsigniert, Gerät im Heimnetz), das steht in der Oberfläche als Hinweis. Optional später: Pinning des Bambu-Zertifikats. Der gemeinsame `MqttClient` (`../common/php`) bekommt dafür eine **abwärtskompatible** Option `tls` (Standard aus); die anderen Plugins ändern sich nicht.
 
-**Zugang und Firmware (zu prüfen am H2C):**
-- LAN-Modus muss am Drucker an sein. Dann ist die Cloud-Anbindung des Druckers aus.
-- Seit der *Authorization Control* (X1 ab 03/2025, P1/A1 ab 06/2025) ist das **Steuern** per LAN nur im **Entwicklermodus** möglich (Einstellungen → Netzwerk → Nur LAN-Modus → Entwicklermodus). **Lesen geht ohne Entwicklermodus** (am H2C geprüft, 2026-11-10: nur LAN-Modus an, Anmeldung, `get_version`, `pushall` und der laufende Report funktionieren). Ob **Befehle** ohne Entwicklermodus abgelehnt werden, ist noch zu prüfen; die Oberfläche zeigt, wenn Befehle abgelehnt werden.
-- Wie viele MQTT-Clients der Drucker gleichzeitig erlaubt, ist offen (Bambu Studio, Home Assistant …): zu prüfen. Das Plugin verbindet sich je Drucker mit **einer** Verbindung und baut sie bei Abbruch mit steigender Wartezeit neu auf.
+**Zugang und Firmware (am H2C geprüft, 2026-11-10):**
+- **LAN-Modus:** Am H2C geht das Auslesen auch ohne LAN-Modus (Rico, mit dem Plugin). Ob andere Modelle ihn brauchen, ist ungeprüft. Mit LAN-Modus ist die Cloud-Anbindung des Druckers aus.
+- Seit der *Authorization Control* (X1 ab 03/2025, P1/A1 ab 06/2025) ist das **Steuern** per LAN nur im **Entwicklermodus** möglich (Einstellungen → Netzwerk → Nur LAN-Modus → Entwicklermodus). **Lesen geht ohne Entwicklermodus** (am H2C geprüft, 2026-11-10: nur LAN-Modus an, Anmeldung, `get_version`, `pushall` und der laufende Report funktionieren). **Druckbefehle** (`print.*`) lehnt der H2C ohne Entwicklermodus ab (siehe Abschnitt 9); die Oberfläche zeigt einen Hinweis, wenn der Drucker Befehle ablehnt.
+- Mindestens vier MQTT-Clients gleichzeitig gehen am H2C (Bambu Studio zweimal, ioBroker-Adapter, Test-Skript, siehe Abschnitt 9). Das Plugin verbindet sich je Drucker mit **einer** Verbindung und baut sie bei Abbruch mit steigender Wartezeit neu auf.
 
 ## 3. Konfiguration
 
@@ -118,7 +118,7 @@ Reiter: **Drucker · MQTT · Einbindung in Loxone · Test · Logdateien**, Menü
 
 Wie Fronius2Lox/Nut2Lox: eigenes Repo `bambulab/` mit `plugin.cfg` (Name `bambulab2lox`, Ordner `bambulab2lox`, `AUTOMATIC_UPDATES=true`, `RELEASECFG`, `WEBSITE`, `CUSTOM_LOGLEVELS=true`), `bin/` (Dienst `bambulabd.php`, Healthcheck, Bibliotheken), `daemon/`, `cron/` (Watchdog), `webfrontend/htmlauth/`, `build.sh` (mit `release-cfg` und ZIP ohne Version), `tests/`. Gemeinsamer Code kommt aus `../common/php` (Util, Logger, MqttClient, GatewayInfo); der Bambu-spezifische Teil (TLS-MQTT zum Drucker, Zustand, Mapper, Befehle) liegt im Plugin.
 - Zeitzone `Europe/Berlin`, Sprache Deutsch, keine Zugangsdaten im Log, Konfiguration atomar mit Rechten 0600, übersteht Updates.
-- Healthcheck `bin/healthcheck` (nur lesend, schnell). Logo und Icons: Rico liefert sie oder gibt sie frei, ich ändere keine vorhandenen.
+- Healthcheck `bin/healthcheck` (nur lesend, schnell). Logo und Icons: `tools/make_logo.py` erzeugt sie im Stil der anderen Plugins; Änderungen nur auf Wunsch von Rico.
 
 ## 8. Tests
 
@@ -145,12 +145,13 @@ Wie Fronius2Lox/Nut2Lox: eigenes Repo `bambulab/` mit `plugin.cfg` (Name `bambul
 - Die Schritte eines Wechsels erscheinen in `stg_cur` (Stufenkennung des Druckers, z. B. 29, 13, 74, 72, 4, 8, 14).
 - Der Druck startete mit `PREPARE` → `RUNNING`; `layer_num` sprang beim Start kurz auf den Wert des vorigen Drucks (460), bevor es 0 wurde. Das Plugin soll solche Ausreißer beim Start nicht an Loxone weitergeben (Wert erst nach `RUNNING` und Plausibilität `layer_num ≤ total_layer_num`).
 
-**Noch offen:**
+**Befunde und Stand der Prüfungen:**
 1. **Erledigt:** Lesen geht auch **ohne** Entwicklermodus (zweite Messung, 20 s, 19 Reports mit je 101 Schlüsseln, `get_version` beantwortet). **Befehlstest (2026-11-10, Entwicklermodus aus, LAN-Modus an, Bambu Studio offen):** `system.ledctrl` für `chamber_light` (aus, dann wieder an) wurde mit `result: success` quittiert, und `lights_report` folgte sofort (`off`, dann `on`). Licht geht also **ohne Entwicklermodus**. **Druckbefehle ohne Entwicklermodus (2026-11-10, laufender Druck, Schicht 3, ruhige Phase, Entwicklermodus aus, LAN-Modus an):** `print.print_speed` (Stufe 3 und zurück auf 2), `print.pause` und `print.resume` wurden vom Drucker **abgelehnt**: `result: failed`, `reason: mqtt message verify failed`. Der Druck lief unverändert weiter (`spd_lvl` blieb 2, `gcode_state` blieb RUNNING). Das ist die Authorization Control: **Befehle, die den Druck betreffen (`print.*`), brauchen den Entwicklermodus**, Licht (`system.ledctrl`) nicht. **Mit Entwicklermodus (2026-11-10, derselbe Druck, Schicht 3, ruhige Phase):** `print.print_speed` Stufe 3 → `result: SUCCESS`, `spd_lvl` 3, `spd_mag` 124 (Stufe 2 = 100); danach Stufe 2 → `SUCCESS`, `spd_lvl` 2. `print.pause` → `SUCCESS`, `gcode_state` PAUSE; `print.resume` → `SUCCESS`, `gcode_state` RUNNING. Der Druck lief danach weiter. Die Antworten schreiben `SUCCESS` groß (bei `ledctrl` klein), das Plugin vergleicht ohne Rücksicht auf Groß-/Kleinschreibung. **Stopp** (Rico gab den Druck zum Wegwerfen frei, Schicht 4, 42 %, Entwicklermodus an): `print.stop` → `result: SUCCESS`, `gcode_state` sofort `FAILED`, `print_error` 0, `fail_reason` 0, danach `mc_percent` 0. Ein vom Benutzer abgebrochener Druck steht also **wie ein fehlgeschlagener** auf `FAILED`; das Plugin kann beides nicht unterscheiden und nennt den Zustand `fehler` nur zusammen mit `print_error` ≠ 0, sonst `abgebrochen`. Stopp ohne Entwicklermodus ist nicht getestet (nach dem Muster der anderen `print.*`-Befehle abgelehnt).
 2. **Gleichzeitige MQTT-Clients:** Ein zweiter Client neben Bambu Studio konnte sich anmelden und 27 Reports in 30 s lesen (Bambu Studio war nach Ricos Angabe offen). Bambu Studio blieb dabei live (Rico bestätigt). Später liefen **mindestens vier Clients gleichzeitig** ohne Probleme (Bambu Studio zweimal, der ioBroker-Adapter und die Test-Skripte). Die Höchstzahl ist für das Plugin nicht wichtig und wird nicht weiter getestet.
-3. Bedeutung von `device.extruder.state`, `holder`, `nozzle.exist` (Maske) für „aktive Düse“, „Düsenwechsel“: aus einem Druck mit Wechsel aufzeichnen.
+3. **Düsenwechsel:** `device.extruder.state`, `holder` und `nozzle.exist` wurden an einem Druck mit mehreren Düsenwechseln aufgezeichnet und ausgewertet (siehe oben). Die Deutung (aktive Düse, Düsenwechsel) deckt sich mit den Zeitpunkten, ist aber **nicht offiziell dokumentiert**. Welche Düse links und welche rechts ist, steht nicht in den Daten.
 4. Befehle am H2C: `ledctrl` für `chamber_light` ist geprüft und geht ohne Entwicklermodus (siehe 1). Stufe 2 (Pause, Fortsetzen, Geschwindigkeit) wird ohne Entwicklermodus abgelehnt und geht mit ihm (geprüft). Alle drei Lichter sind geprüft (`chamber_light`, `chamber_light2`, `work_light`: je `result: success`, `lights_report` folgt sofort; das Arbeitslicht steht im Ruhezustand auf `flashing` und ließ sich auf `on` und wieder auf `flashing` stellen). Stopp ist mit Entwicklermodus geprüft (siehe 1). Keine Befehlstests mehr offen.
-5. Verhalten von `status/ok`, wenn der Drucker ausgeschaltet ist (siehe 4).
+5. **Erledigt:** Verhalten von `status/ok`, wenn der Drucker ausgeschaltet ist: erwartet, kein Fehler, solange kein Druck lief (umgesetzt, siehe Abschnitt 11).
+6. **Offen (nicht am echten Drucker geprüft):** Pause, Fortsetzen und Stopp **über das Plugin** (QoS 1; die erfolgreichen Befehle am H2C kamen von einem Testskript mit QoS 0), die Lüfterskala 0–15 in Prozent, die gepackte Kammertemperatur beim Aufheizen, alle anderen Modelle (X1, X1C, X1E, P1P, P1S, A1, A1 mini, H2D, H2S).
 
 ## 10. Vorgehen
 
@@ -162,7 +163,7 @@ Wie Fronius2Lox/Nut2Lox: eigenes Repo `bambulab/` mit `plugin.cfg` (Name `bambul
 
 ## 11. Umsetzung 0.1.0 (Stand 2026-11-10)
 
-Gebaut und gegen einen **Fake-Drucker** (MQTT mit TLS, anonymisierte Reports des H2C aus `tests/fixtures/`) getestet; 302 Prüfungen. **Nicht** gegen den echten Drucker getestet (der LAN-Modus war danach wieder aus): Der PHP-TLS-Client und der Dienst als Ganzes haben noch nie mit dem echten H2C gesprochen. Die Messungen in Abschnitt 9 stammen von einem Python-Skript.
+Gebaut und gegen einen **Fake-Drucker** (MQTT mit TLS, anonymisierte Reports des H2C aus `tests/fixtures/`) getestet; 375 Prüfungen. Die Messungen und Befehlstests in Abschnitt 9 stammen von einem Python-Skript am echten H2C. **Das Plugin selbst** (PHP-Dienst) hat Rico am 2026-11-10 an seinem H2C installiert: Verbindung, Status und Zustand in der Oberfläche sowie der Abruf der HMS-Textliste (2692 HMS- und 973 Fehlertexte für den Modellcode `31B`) funktionieren. **Befehle über das Plugin** (insbesondere QoS 1 bei Pause, Fortsetzen und Stopp) sind am echten Drucker noch nicht geprüft.
 
 Abweichungen und Ergänzungen gegenüber dem Entwurf:
 - `info/seriennummer` wird **nicht** gesendet (die Seriennummer steht nur in der Konfiguration).
@@ -176,4 +177,4 @@ Abweichungen und Ergänzungen gegenüber dem Entwurf:
 - **HMS-Klartext** (Option `hms_klartext`, ab Werk aus; `hms_sprache` de/en): `bin/lib/BambuHmsTexte.php` lädt `https://e.bambulab.com/query.php?lang=<de|en>&d=<Modellcode>` (HTTPS mit Zertifikatsprüfung, 10 s, höchstens 5 MB, kein Konto, keine Zugangsdaten, nur die ersten 3 Zeichen der Seriennummer), speichert die Liste im Datenordner (`hms_<Modell>_<Sprache>.json`, atomar), lädt höchstens einmal je Woche neu und arbeitet bei Ausfall mit dem Zwischenspeicher weiter (Wiederholung frühestens nach 1 Stunde, verdoppelt sich bis höchstens 1 Tag). Drucker gleichen Modellcodes teilen sich eine Liste. Die neuen Topics heißen `fehler/hms_klartext`, `fehler/hms_code`, `fehler/text`; **`fehler/hms_text` bleibt unverändert die Codeliste** (bestehende Topics nicht umbenannt). Ohne Text bleibt der Code stehen; ohne Meldung bzw. Fehlercode 0 steht `keine`. Die Oberfläche lädt nichts aus dem Internet, sie liest nur den Zwischenspeicher. Nur gegen einen Fake-Server (HTTP) getestet; der echte Abruf bei Bambu (HTTPS-Zertifikat, Antwortgröße von rund 650 KB, Texte zu den echten Codes) ist am LoxBerry mit Internet zu prüfen. Testzahl 0.1.0 jetzt 375.
 - `status/ok`: ausgeschalteter Drucker ohne laufenden Druck = erwartet (`aus`, `status/ok` bleibt 1); falscher Access Code, Verbindungsverlust bei `RUNNING`/`PAUSE`/`PREPARE` und ein verbundener, aber schweigender Drucker (60 s) = Fehler.
 - Der Dienst verbindet die Drucker nacheinander in einer Schleife (Verbindungs-Timeout 3 s, wachsender Abstand bis 60 s, bei falschem Access Code bis 120 s); viele gleichzeitig ausgeschaltete Drucker verlängern also die Schleife.
-- Kein `icons/`-Ordner (Logo liefert Rico).
+- Logo und Icons: `tools/make_logo.py` erzeugt `docs/logo/bambulab2lox.png` und `bambulab2lox/icons/icon_*.png` (der H2C schematisch nach Ricos Foto, ohne Herstellerlogo).

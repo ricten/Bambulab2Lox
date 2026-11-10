@@ -11,16 +11,18 @@ bambulab2lox/               Inhalt des Plugin-ZIP
 │   ├── bambulabd.php       Dienst (Drucker-Verbindungen, MQTT, Befehle)
 │   ├── healthcheck         LoxBerry-Healthcheck (Dienst, Broker, Drucker)
 │   ├── start.sh stop.sh
-│   └── lib/                 BambuConfig, BambuState, BambuMapper, BambuCommands, BambuPrinter, bootstrap, AppVersion
+│   └── lib/                 BambuConfig, BambuState, BambuMapper, BambuCommands, BambuPrinter, BambuHmsTexte, bootstrap, AppVersion
 │                            + Util, Logger, MqttClient, GatewayInfo (aus ../common/php, kopiert build.sh)
 ├── config/mqtt_subscriptions.cfg
+├── icons/icon_{64,128,256,512}.png
 └── webfrontend/htmlauth/index.php
 tests/                       Unit-/Ende-zu-Ende-Tests, Fake-Drucker und Fake-Broker, anonymisierte Reports (nicht im ZIP)
-docs/                        Wiki (nicht im ZIP)
-SPEZIFIKATION.md             Entwurf und Befunde am H2C
+docs/                        Wiki, Vorlage für das LoxBerry-Wiki, Logo (nicht im ZIP)
+SPEZIFIKATION.md             Spezifikation und Befunde am H2C
+tools/make_logo.py           erzeugt Logo und Plugin-Icons (Pillow)
 ```
 
-Der gemeinsame Code liegt außerhalb des Repos in `loxberry-plugins/common/php/`. `build.sh` kopiert ihn ins ZIP; kein Plugin importiert aus einem anderen. Es gibt bewusst keinen `icons/`-Ordner: Das Logo liefert der Autor; ohne Icons nimmt der Installer Standard-Icons.
+Der gemeinsame Code liegt außerhalb des Repos in `loxberry-plugins/common/php/`. `build.sh` kopiert ihn ins ZIP; kein Plugin importiert aus einem anderen. Logo und Plugin-Icons erzeugt `tools/make_logo.py` (Pillow) im Stil der anderen Plugins; die Dateinamen `icons/icon_*.png` sind vom Installer vorgegeben. Kein `icon.svg`.
 
 ## Klassen
 
@@ -54,7 +56,7 @@ php tests/run.php
 - **Ende zu Ende:** `bambulabd.php` im Entwicklungsmodus (`BBL_DEV_DIR`, `BBL_DEV_MQTT`) gegen den **Fake-Drucker** `tests/fake_bambu.php` (MQTT-Broker mit TLS, selbst signiertes Testzertifikat, das bei jedem Lauf neu erzeugt wird; spielt die Fixtures ab, antwortet auf `get_version`, `pushall` und die Befehle, kann „Entwicklermodus aus“ und P1-Teil-Updates nachbilden) und den Fake-Broker `tests/fake_mqtt.php`.
 - Healthcheck, Weboberfläche mit Attrappen der LoxBerry-Bibliotheken (`tests/stubs`, `tests/ui_page.php`), `build.sh` und der ZIP-Inhalt.
 
-**Nicht lokal testbar** (nur auf dem LoxBerry bzw. am echten Drucker): LoxBerry-Bibliotheken (`LBWeb`, `LBLog`, `mqtt_connectiondetails`), das Aussehen der Weboberfläche, das echte Zertifikat und das Verhalten von X1, P1, A1 und den anderen H2-Modellen. Am echten H2C wurden von Hand geprüft: Lesen, die drei Lichter, Geschwindigkeit, Pause, Fortsetzen und Stopp (siehe `SPEZIFIKATION.md`).
+**Nicht lokal testbar** (nur auf dem LoxBerry bzw. am echten Drucker): LoxBerry-Bibliotheken (`LBWeb`, `LBLog`, `mqtt_connectiondetails`), das Aussehen der Weboberfläche, das echte Zertifikat und das Verhalten von X1, P1, A1 und den anderen H2-Modellen. Am echten H2C wurden von Hand geprüft: Lesen, die drei Lichter, Geschwindigkeit, Pause, Fortsetzen und Stopp (mit einem Testskript, siehe `SPEZIFIKATION.md`) sowie mit dem installierten Plugin die Verbindung, der Status und der Abruf der HMS-Textliste. Befehle über das Plugin sind noch nicht am echten Drucker geprüft.
 
 ## Dienst lokal starten
 

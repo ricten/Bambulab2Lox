@@ -10,9 +10,9 @@ Release-Ablauf: Version in `bambulab2lox/plugin.cfg` und `bambulab2lox/bin/lib/A
 
 ## [0.1.0] – 2026-11-10
 
-Erste Version (lokal gebaut, noch nicht veröffentlicht). Ersetzt den ioBroker-Adapter `bambulab`. Am echten Drucker wurde nur ein **H2C** geprüft
-(Lesen, Lichter, Geschwindigkeit, Pause, Fortsetzen, Stopp); X1, P1, A1 und die anderen H2-Modelle sind nach der inoffiziellen Beschreibung des
-Druckerprotokolls (OpenBambuAPI) umgesetzt und ungeprüft.
+Erste Version (Beta). Ersetzt den ioBroker-Adapter `bambulab`. Am echten Drucker wurde nur ein **H2C** geprüft
+(Lesen, Lichter, Geschwindigkeit, Pause, Fortsetzen, Stopp, HMS-Klartext); X1, X1C, X1E, P1P, P1S, A1, A1 mini und die anderen H2-Modelle sind nach der
+inoffiziellen Beschreibung des Druckerprotokolls (OpenBambuAPI) umgesetzt und ungeprüft.
 
 ### Neu
 - **HMS-Klartext (Option, ab Werk aus):** Mit der Option lädt das Plugin die öffentliche Textliste von Bambu (`e.bambulab.com/query.php`, ohne Konto, mit dem Modellcode aus den ersten drei Zeichen der Seriennummer, Deutsch oder Englisch), beim ersten Start und danach einmal je Woche, und merkt sie sich im Datenordner. Neue Topics: `fehler/hms_klartext` (Text der Meldungen, mit " | " getrennt, höchstens 1000 Zeichen), `fehler/hms_code` (Code der ersten Meldung) und `fehler/text` (Text zum Fehlercode des Druckers). Meldungen ohne Text zeigen ihren Code; nicht jeder Code hat einen Text. Bei Netzausfall bleibt die gespeicherte Liste in Gebrauch, neue Versuche frühestens nach einer Stunde (wachsend bis zu einem Tag). `fehler/hms_text` und die übrigen Topics bleiben unverändert. Die Texte liegen weder im Repo noch im ZIP.
@@ -29,3 +29,4 @@ Druckerprotokolls (OpenBambuAPI) umgesetzt und ungeprüft.
 - Weboberfläche im LoxBerry Design System: Reiter Drucker, MQTT (mit Prüfung des Gateway-Abos), Einbindung in Loxone (alle Topics und Befehle), Test (Sofort abrufen, Selbstprüfung) und Logdateien.
 - Automatische Updates (`release.cfg` im Repository, `bash build.sh release-cfg`), ZIP ohne Version im Namen für einen festen Download-Link.
 - Tests mit einem Fake-Drucker (MQTT mit TLS) und den anonymisierten Reports eines H2C.
+- Doku: Wiki im Repository (`docs/wiki/`), Vorlage für die Seite im LoxBerry-Wiki (`docs/loxberry-wiki/`), Logo und Plugin-Icons.

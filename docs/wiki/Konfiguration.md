@@ -35,6 +35,8 @@ Befehle aus Loxone (siehe [Loxone-Anbindung](Loxone-Anbindung.md)) sind ab Werk 
 | Pause, Fortsetzen, Geschwindigkeit | `pause`, `fortsetzen`, `geschwindigkeit` (1–4) | greift in den laufenden Druck ein; braucht den **Entwicklermodus** am Drucker |
 | Stopp | `stopp` | bricht den Druck ab; braucht den **Entwicklermodus** am Drucker |
 
+Lehnt der Drucker Pause, Fortsetzen, Geschwindigkeit oder Stopp ab, steht in der Statuszeile des Druckers ein Hinweis, dass der **Entwicklermodus** fehlt (ohne ihn ist nur das Licht schaltbar). Der Hinweis verschwindet, sobald ein Druckbefehl wieder durchgeht.
+
 Nie vorgesehen sind rohes G-Code, Druckaufträge starten, Firmware-Befehle und Kalibrierung.
 
 ## Erwartete Zustände und Fehler
