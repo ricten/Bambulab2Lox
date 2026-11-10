@@ -12,7 +12,7 @@
 ^ Quellcode | [[https://github.com/ricten/Bambulab2Lox|github.com/ricten/Bambulab2Lox]] (MIT-Lizenz) |
 ^ Beschreibung | Liest Bambu-Lab-Drucker über deren lokalen MQTT-Broker aus (kein Cloud-Zugriff) und veröffentlicht Zustand, Fortschritt, Temperaturen, Lüfter, Lichter, AMS und Fehler per MQTT. Über das LoxBerry-MQTT-Gateway gelangen die Werte an den Loxone Miniserver. Dazu Befehle aus Loxone (Licht, Pause, Fortsetzen, Geschwindigkeit, Stopp), ab Werk gesperrt und mit Quittung. Ersatz für den ioBroker-Adapter bambulab. |
 ^ Sprachen | DE |
-^ Diskussion | FORUM-LINK-EINTRAGEN |
+^ Diskussion | https://www.loxforum.com/forum/projektforen/loxberry/plugins/494978-loxberry-plugin-bambulab2lox-%E2%80%93-bambu-lab-drucker-per-mqtt-an-den-miniserver |
 
 ----
 
