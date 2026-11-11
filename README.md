@@ -1,13 +1,13 @@
 # Bambulab2Lox – LoxBerry-Plugin
 <img src="docs/logo/bambulab2lox.png" alt="Bambulab2Lox Logo" width="128">
 
-**Version 0.1.0** · Benötigt LoxBerry 4 (PHP ≥ 8.4) · [Changelog](CHANGELOG.md)
+**Version 0.1.1** · Benötigt LoxBerry 4 (PHP ≥ 8.2) · [Changelog](CHANGELOG.md)
 
 Dokumentation: [docs/wiki/Home.md](docs/wiki/Home.md)
 
 Liest **Bambu-Lab-Drucker** über deren lokalen MQTT-Broker (TLS, Port 8883, Access Code) aus und veröffentlicht Zustand, Fortschritt, Temperaturen, Lüfter, Lichter, AMS und Fehler per MQTT am LoxBerry-Broker (→ MQTT-Gateway → Loxone). Dazu Befehle aus Loxone (Licht, Pause, Fortsetzen, Geschwindigkeit, Stopp), ab Werk gesperrt und mit Quittung. Ersetzt den ioBroker-Adapter `bambulab`. Nichts läuft über die Bambu-Cloud.
 
-**Beta (0.1.0): geprüft ist bisher nur ein H2C** (Auslesen, Lichter, Geschwindigkeit, Pause, Fortsetzen, Stopp, HMS-Klartext). X1, X1C, X1E, P1P, P1S, A1, A1 mini und die anderen H2-Modelle sind nach der inoffiziellen Beschreibung des Druckerprotokolls umgesetzt (Spezifikation: [SPEZIFIKATION.md](SPEZIFIKATION.md)).
+**Beta (0.1.1): geprüft ist bisher nur ein H2C** (Auslesen, Lichter, Geschwindigkeit, Pause, Fortsetzen, Stopp, HMS-Klartext). X1, X1C, X1E, P1P, P1S, A1, A1 mini und die anderen H2-Modelle sind nach der inoffiziellen Beschreibung des Druckerprotokolls umgesetzt (Spezifikation: [SPEZIFIKATION.md](SPEZIFIKATION.md)).
 
 ## Voraussetzungen am Drucker
 - **Auslesen** geht am H2C **ohne LAN-Modus und ohne Entwicklermodus**; Seriennummer und **Access Code** stehen am Drucker unter Einstellungen → WLAN/Netzwerk. Bei anderen Modellen kann der LAN-Modus nötig sein (er schaltet die Bambu-Cloud für diesen Drucker ab; Bambu Studio im selben Netz und weitere Clients, mindestens vier gleichzeitig getestet, funktionieren parallel).

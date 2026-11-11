@@ -8,9 +8,9 @@
  */
 final class BambuPrinter
 {
-    private const int REFRESH = 300;            // Sekunden: alle Werte auch ohne Aenderung erneut senden
-    private const int ACK_TIMEOUT = 10;         // Sekunden bis "keine Antwort des Druckers"
-    private const float MIN_ABSTAND = 1.0;      // hoechstens ein Befehl je Sekunde
+    private const REFRESH = 300;            // Sekunden: alle Werte auch ohne Aenderung erneut senden
+    private const ACK_TIMEOUT = 10;         // Sekunden bis "keine Antwort des Druckers"
+    private const MIN_ABSTAND = 1.0;      // hoechstens ein Befehl je Sekunde
 
     public string $name;
     private ?MqttClient $mqtt = null;

@@ -5,9 +5,9 @@
  */
 final class BambuConfig
 {
-    public const int MAX_DRUCKER = 8;
+    public const MAX_DRUCKER = 8;
     /** Stufen der Befehlsfreigabe je Drucker: licht (Lichter), druck (Pause, Fortsetzen, Geschwindigkeit), stopp (Druck abbrechen). */
-    public const array STUFEN = ['licht' => 'Licht', 'druck' => 'Pause, Fortsetzen, Geschwindigkeit', 'stopp' => 'Stopp'];
+    public const STUFEN = ['licht' => 'Licht', 'druck' => 'Pause, Fortsetzen, Geschwindigkeit', 'stopp' => 'Stopp'];
 
     public static function defaultDrucker(string $name = ''): array
     {

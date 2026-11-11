@@ -10,7 +10,7 @@
 final class BambuState
 {
     /** Pfade (Punktschreibweise, Listenindex als *), deren Listen ueber den Schluessel zusammengefuehrt werden: Pfad => Schluessel. */
-    private const array LISTEN = [
+    private const LISTEN = [
         'ams.ams' => 'id',
         'ams.ams.*.tray' => 'id',
         'lights_report' => 'node',

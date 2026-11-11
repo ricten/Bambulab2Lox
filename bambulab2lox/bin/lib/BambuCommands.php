@@ -11,7 +11,7 @@
 final class BambuCommands
 {
     /** Befehl => [Stufe, erlaubte Werte als Regex, Bezeichnung]. */
-    public const array LISTE = [
+    public const LISTE = [
         'licht_kammer' => ['licht', '/^[01]$/', 'Kammerlicht (1 an, 0 aus)'],
         'licht_kammer2' => ['licht', '/^[01]$/', 'zweites Kammerlicht (1 an, 0 aus; nur H2)'],
         'licht_arbeit' => ['licht', '/^[01]$/', 'Arbeitslicht (1 an, 0 Ruhezustand/blinkend)'],

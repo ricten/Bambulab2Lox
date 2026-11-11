@@ -1,6 +1,6 @@
 # Bambulab2Lox – Spezifikation
 
-Stand: 2026-11-10 · Status: **Beta 0.1.0** (Entwurf umgesetzt, am H2C geprüft). Abschnitt 9 enthält die Befunde der Messungen am H2C, Abschnitt 11 die Umsetzung und die Abweichungen vom ursprünglichen Entwurf.
+Stand: 2026-11-10 · Status: **Beta 0.1.1** (Entwurf umgesetzt, am H2C geprüft). Abschnitt 9 enthält die Befunde der Messungen am H2C, Abschnitt 11 die Umsetzung und die Abweichungen vom ursprünglichen Entwurf.
 Ersetzt den ioBroker-Adapter `bambulab` (DrozmotiX/ioBroker.bambulab, MIT-Lizenz; dient nur als Vorlage für die Datenfelder, Code wird nicht übernommen).
 Es gelten die Regeln aus `../CLAUDE.md` und `../README.md`.
 

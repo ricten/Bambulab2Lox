@@ -13,12 +13,12 @@
  */
 final class BambuHmsTexte
 {
-    public const int WOCHE = 604800;          // Sekunden zwischen zwei Abrufen
-    public const int MAX_BYTES = 5242880;     // Groessenlimit der Antwort (5 MB)
-    public const int RETRY_BASIS = 3600;      // erster Wiederholungsabstand nach einem Fehler
-    public const int RETRY_MAX = 86400;
-    public const int MAX_LAENGE = 1000;       // Zeichen (Bytes) je Topic
-    public const string BASIS_URL = 'https://e.bambulab.com/query.php';
+    public const WOCHE = 604800;          // Sekunden zwischen zwei Abrufen
+    public const MAX_BYTES = 5242880;     // Groessenlimit der Antwort (5 MB)
+    public const RETRY_BASIS = 3600;      // erster Wiederholungsabstand nach einem Fehler
+    public const RETRY_MAX = 86400;
+    public const MAX_LAENGE = 1000;       // Zeichen (Bytes) je Topic
+    public const BASIS_URL = 'https://e.bambulab.com/query.php';
 
     /** @var array<string,string> 16-stelliger HMS-Code => Text */
     private array $hms = [];
