@@ -32,7 +32,7 @@
 ## Voraussetzungen
 
 - LoxBerry ≥ 4.0 mit aktivem MQTT-Broker (Mosquitto) und MQTT-Gateway (oder eigener Broker)
-- PHP ≥ 8.2 mit der Erweiterung `openssl` (bei LoxBerry 4 dabei)
+- PHP ≥ 8.2 mit der Erweiterung `openssl` (Kommandozeile und Web). Das hat LoxBerry 4.0 auf Debian 13 (Trixie); auf Debian 11 und 12 ist meist PHP 7.4 aktiv, dann zuerst die Debian-Version anheben ([Anleitung im LoxBerry-Wiki](https://wiki.loxberry.de/installation_von_loxberry/upgrade_distribution/start)). Die Installation prüft das und bricht sonst mit einem Hinweis ab
 - Ein Bambu-Lab-Drucker im selben Netz. Am H2C geht das Auslesen ohne LAN- und Entwicklermodus; bei anderen Modellen kann der **LAN-Modus** nötig sein. Für Pause, Fortsetzen, Geschwindigkeit und Stopp ist der **Entwicklermodus** nötig, ohne ihn ist nur das Licht schaltbar (siehe [Installation](Installation.md))
 
 ## Lizenz
