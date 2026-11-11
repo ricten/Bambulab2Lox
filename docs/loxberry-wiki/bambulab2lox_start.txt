@@ -6,8 +6,8 @@
 ^ Logo | {{:plugins:bambulab2lox:bambulab2lox.png?64|Bambulab2Lox}} |
 ^ Status | BETA |
 ^ Version | 0.1.1 |
-^ Min. LB Version | 4.0 (benötigt PHP 8.2 oder neuer mit der Erweiterung openssl) |
-^ Release Download | [[https://github.com/ricten/Bambulab2Lox/releases/latest|GitHub Releases (aktuelle Version)]] \\ [[https://github.com/ricten/Bambulab2Lox/releases/download/v0.1.1/bambulab2lox-0.1.1.zip|bambulab2lox-0.1.1.zip]] |
+^ Min. LB Version | 4.0.0.0 |
+^ Release Download | https://github.com/ricten/Bambulab2Lox/releases/latest/download/bambulab2lox.zip |
 ^ Pre-Release Download | - |
 ^ Quellcode | [[https://github.com/ricten/Bambulab2Lox|github.com/ricten/Bambulab2Lox]] (MIT-Lizenz) |
 ^ Beschreibung | Liest Bambu-Lab-Drucker über deren lokalen MQTT-Broker aus (kein Cloud-Zugriff) und veröffentlicht Zustand, Fortschritt, Temperaturen, Lüfter, Lichter, AMS und Fehler per MQTT. Über das LoxBerry-MQTT-Gateway gelangen die Werte an den Loxone Miniserver. Dazu Befehle aus Loxone (Licht, Pause, Fortsetzen, Geschwindigkeit, Stopp), ab Werk gesperrt und mit Quittung. Ersatz für den ioBroker-Adapter bambulab. |
