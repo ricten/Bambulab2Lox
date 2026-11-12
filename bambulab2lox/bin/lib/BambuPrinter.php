@@ -32,8 +32,17 @@ final class BambuPrinter
     private int $reports = 0;
     private ?BambuHmsTexte $hmsTexte = null;    // Klartext zu HMS-Meldungen (nur wenn die Option an ist)
 
-    public function __construct(private array $cfg, private readonly Logger $log, private readonly string $folder, private int $pushallAbstand = 300)
+    private array $cfg;
+    private Logger $log;
+    private string $folder;
+    private int $pushallAbstand;
+
+    public function __construct(array $cfg, Logger $log, string $folder, int $pushallAbstand = 300)
     {
+        $this->cfg = $cfg;
+        $this->log = $log;
+        $this->folder = $folder;
+        $this->pushallAbstand = $pushallAbstand;
         $this->name = $cfg['name'];
         $this->seq = 1000 + random_int(0, 8000);   // klar ueber den sequence_id des Druckers (zaehlt ab 0)
     }

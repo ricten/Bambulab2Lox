@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../common/php/Util.php';    // Rueckfaelle fuer PHP 7.4 (str_contains usw.)
 /**
  * Fake der Bambu-Textliste fuer Tests: php tests/fake_hms.php <port> <verzeichnis>
  * Antwortet per HTTP (nur Tests; das Plugin nutzt bei Bambu selbst HTTPS mit Zertifikatspruefung) auf GET /query.php?lang=<de|en>&d=<Modell>

@@ -66,27 +66,41 @@ final class BambuCommands
         $led = fn(string $node, string $modus) => ['system', json_encode(['system' => ['sequence_id' => $seq, 'command' => 'ledctrl', 'led_node' => $node, 'led_mode' => $modus,
             'led_on_time' => 500, 'led_off_time' => 500, 'loop_times' => 1, 'interval_time' => 1000]]), 0];
         $druck = fn(string $cmd, string $param, int $qos) => ['print', json_encode(['print' => ['sequence_id' => $seq, 'command' => $cmd, 'param' => $param]]), $qos];
-        return match ($befehl) {
-            'licht_kammer' => $led('chamber_light', $wert === '1' ? 'on' : 'off'),
-            'licht_kammer2' => $led('chamber_light2', $wert === '1' ? 'on' : 'off'),
-            'licht_arbeit' => $led('work_light', $wert === '1' ? 'on' : 'flashing'),      // Ruhezustand des Arbeitslichts am H2C: flashing
-            'pause' => $druck('pause', '', 1),
-            'fortsetzen' => $druck('resume', '', 1),
-            'stopp' => $druck('stop', '', 1),
-            'geschwindigkeit' => $druck('print_speed', $wert, 0),
-        };
+        switch ($befehl) {
+            case 'licht_kammer':
+                return $led('chamber_light', $wert === '1' ? 'on' : 'off');
+            case 'licht_kammer2':
+                return $led('chamber_light2', $wert === '1' ? 'on' : 'off');
+            case 'licht_arbeit':
+                return $led('work_light', $wert === '1' ? 'on' : 'flashing');      // Ruhezustand des Arbeitslichts am H2C: flashing
+            case 'pause':
+                return $druck('pause', '', 1);
+            case 'fortsetzen':
+                return $druck('resume', '', 1);
+            case 'stopp':
+                return $druck('stop', '', 1);
+            case 'geschwindigkeit':
+                return $druck('print_speed', $wert, 0);
+        }
+        throw new \InvalidArgumentException('Unbekannter Befehl: ' . $befehl);
     }
 
     /** Drucker-Befehl, der zu einem Loxone-Befehl gehoert (steht in der Antwort unter `command`). */
     public static function druckerBefehl(string $befehl): string
     {
-        return match ($befehl) {
-            'licht_kammer', 'licht_kammer2', 'licht_arbeit' => 'ledctrl',
-            'fortsetzen' => 'resume',
-            'stopp' => 'stop',
-            'geschwindigkeit' => 'print_speed',
-            default => $befehl,
-        };
+        switch ($befehl) {
+            case 'licht_kammer':
+            case 'licht_kammer2':
+            case 'licht_arbeit':
+                return 'ledctrl';
+            case 'fortsetzen':
+                return 'resume';
+            case 'stopp':
+                return 'stop';
+            case 'geschwindigkeit':
+                return 'print_speed';
+        }
+        return $befehl;
     }
 
     /**

@@ -39,8 +39,13 @@ final class BambuHmsTexte
      * @param string        $seriennummer Seriennummer des Druckers (nur die ersten 3 Zeichen werden verwendet)
      * @param callable|null $fetch       Ersatz fuer den Abruf (Tests): function(string $url): ?string
      */
-    public function __construct(private readonly string $verzeichnis, string $seriennummer, string $sprache = 'de', private readonly ?string $basisUrl = null, ?callable $fetch = null)
+    private string $verzeichnis;
+    private ?string $basisUrl;
+
+    public function __construct(string $verzeichnis, string $seriennummer, string $sprache = 'de', ?string $basisUrl = null, ?callable $fetch = null)
     {
+        $this->verzeichnis = $verzeichnis;
+        $this->basisUrl = $basisUrl;
         $this->modell = self::modellCode($seriennummer);
         $this->sprache = self::cleanSprache($sprache);
         $this->fetch = $fetch;

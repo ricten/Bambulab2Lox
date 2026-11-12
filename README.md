@@ -1,7 +1,7 @@
 # Bambulab2Lox – LoxBerry-Plugin
 <img src="docs/logo/bambulab2lox.png" alt="Bambulab2Lox Logo" width="128">
 
-**Version 0.1.2** · Benötigt LoxBerry 4 (PHP ≥ 8.2) · [Changelog](CHANGELOG.md)
+**Version 0.1.3** · Benötigt LoxBerry 4 (PHP ≥ 7.4) · [Changelog](CHANGELOG.md)
 
 Dokumentation: [docs/wiki/Home.md](docs/wiki/Home.md)
 
